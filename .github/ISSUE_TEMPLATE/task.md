@@ -25,7 +25,3 @@ assignees: []
 ### 📋 CS364 Rubric Mapping
 - ข้อ `<เช่น 1.1, 4.3>` ใน `docs/REPORT_AND_AI_LOG.md`
 
-### 🤖 คำสั่งสำหรับสั่ง AI (ก๊อปไปวางใน Chat ได้เลย)
-```text
-ช่วยทำ Issue นี้ให้หน่อย โดยแก้เฉพาะไฟล์ที่ระบุใน Files Owned ปฏิบัติตามกฎใน AGENTS.md และพอทำเสร็จช่วยอัปเดต docs/REPORT_AND_AI_LOG.md พร้อมสรุป PR ตาม Template ให้ด้วย
-```
