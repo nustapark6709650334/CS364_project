@@ -1,18 +1,13 @@
 package com.cs364.foodrush.ui.components
 
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -20,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -33,7 +29,8 @@ import com.cs364.foodrush.R
 /**
  * Role 2: 16-Bit Pixel Art Arcade Pause & Exit Confirmation Dialog (Issue #5, Rubric 4.2 & 4.4).
  *
- * Shown when the player taps Pause, presses the system Back button during gameplay,
+ * Styled with stepped pixel arcade borders matching `docs/ui/ui_pixel_subscreens.png`.
+ * Shown when the player taps Pause, presses system Back during gameplay,
  * or returns after Activity `ON_PAUSE` / `ON_STOP`.
  */
 @Composable
@@ -53,72 +50,67 @@ fun PauseExitDialog(
             dismissOnClickOutside = false
         )
     ) {
-        Surface(
+        PixelArcadeBox(
             modifier = modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(8.dp),
-            color = colorScheme.surface,
-            border = BorderStroke(3.dp, colorScheme.outline),
-            shadowElevation = 8.dp
+            fillColor = colorScheme.surface,
+            borderColor = colorScheme.onSurface,
+            cornerStep = 5.dp,
+            contentPadding = PaddingValues(16.dp)
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                // Header banner
-                Surface(
+                // Dark stepped arcade header plaque
+                PixelArcadeBox(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(6.dp),
-                    color = colorScheme.primaryContainer,
-                    border = BorderStroke(2.dp, colorScheme.outline)
+                    fillColor = colorScheme.inverseSurface,
+                    borderColor = colorScheme.onSurface,
+                    cornerStep = 4.dp,
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp)
                 ) {
                     Text(
                         text = stringResource(R.string.pause_dialog_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.ExtraBold,
                         fontFamily = FontFamily.Monospace,
-                        color = colorScheme.onPrimaryContainer,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
+                        color = colorScheme.inverseOnSurface,
+                        textAlign = TextAlign.Center
                     )
                 }
 
-                // Preserved score & speed summary box
-                Surface(
+                // Preserved score & speed status box
+                PixelArcadeBox(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(6.dp),
-                    color = colorScheme.surfaceVariant,
-                    border = BorderStroke(2.dp, colorScheme.outline)
+                    fillColor = colorScheme.surfaceVariant,
+                    borderColor = colorScheme.onSurface,
+                    cornerStep = 4.dp,
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 14.dp)
                 ) {
                     Text(
                         text = stringResource(R.string.pause_dialog_body, score, speedLabel),
                         style = MaterialTheme.typography.bodyMedium,
                         fontFamily = FontFamily.Monospace,
                         color = colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 14.dp)
+                        textAlign = TextAlign.Center
                     )
                 }
 
-                // Action buttons: Resume vs Exit to Main Menu
+                // 3D Pixel Keycap Action Buttons: Resume vs Exit to Main Menu
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Button(
-                        onClick = onResume,
+                    PixelArcadeBox(
                         modifier = Modifier
                             .weight(1f)
-                            .heightIn(min = 48.dp),
-                        shape = RoundedCornerShape(6.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = colorScheme.primary,
-                            contentColor = colorScheme.onPrimary
-                        ),
-                        border = BorderStroke(2.dp, colorScheme.outline),
+                            .heightIn(min = 48.dp)
+                            .clickable(role = Role.Button, onClick = onResume),
+                        fillColor = colorScheme.primary,
+                        borderColor = colorScheme.onSurface,
+                        cornerStep = 3.dp,
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 10.dp)
                     ) {
                         Text(
@@ -126,22 +118,20 @@ fun PauseExitDialog(
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.ExtraBold,
                             fontFamily = FontFamily.Monospace,
+                            color = colorScheme.onPrimary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
 
-                    Button(
-                        onClick = onConfirmExit,
+                    PixelArcadeBox(
                         modifier = Modifier
                             .weight(1f)
-                            .heightIn(min = 48.dp),
-                        shape = RoundedCornerShape(6.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = colorScheme.errorContainer,
-                            contentColor = colorScheme.onErrorContainer
-                        ),
-                        border = BorderStroke(2.dp, colorScheme.outline),
+                            .heightIn(min = 48.dp)
+                            .clickable(role = Role.Button, onClick = onConfirmExit),
+                        fillColor = colorScheme.errorContainer,
+                        borderColor = colorScheme.onSurface,
+                        cornerStep = 3.dp,
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 10.dp)
                     ) {
                         Text(
@@ -149,6 +139,7 @@ fun PauseExitDialog(
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.ExtraBold,
                             fontFamily = FontFamily.Monospace,
+                            color = colorScheme.onErrorContainer,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
