@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">Fit &amp; Fat: Food Rush</string>
 
-    <!-- Role 1 Base Food & Fail Reason String Keys (Role 5 will expand full TH/EN strings) -->
+    <!-- Role 1 Base Food & Fail Reason String Keys -->
     <string name="food_burger">Burger</string>
     <string name="food_salad">Vegetable Salad</string>
     <string name="food_scraps">Food Scraps</string>
@@ -11,4 +11,63 @@
     <string name="fail_fed_hazard_to_person">Fed hazard (%1$s) to a person!</string>
     <string name="fail_trashed_good_food">Threw good food (%1$s) into the Trash Bin!</string>
     <string name="fail_missed_item">Missed %1$s off the conveyor belt!</string>
+
+    <!-- Common & Navigation -->
+    <string name="cd_navigate_back">Navigate back</string>
+    <string name="btn_back">Back</string>
+    <string name="btn_close">Close</string>
+
+    <!-- Home & Menu (Role 3 Support) -->
+    <string name="subtitle_tagline">Feed the right person before the belt hits max speed!</string>
+    <string name="menu_play">Play</string>
+    <string name="menu_leaderboard">Leaderboard</string>
+    <string name="menu_settings">Settings</string>
+
+    <!-- Gameplay HUD, Game Over & Leaderboard (Role 2 & 4 Support) -->
+    <string name="hud_score">Score: %1$d</string>
+    <string name="hud_speed_level">Speed Lv.%1$d</string>
+    <string name="hud_max_speed">MAX SPEED!</string>
+    <string name="game_paused">Game Paused</string>
+    <string name="btn_resume">Resume</string>
+    <string name="btn_restart">Play Again</string>
+    <string name="btn_home">Home</string>
+    <string name="game_over_title">Game Over!</string>
+    <string name="game_over_score">Final Score: %1$d</string>
+    <string name="game_over_best_score">Best Score: %1$d</string>
+    <string name="leaderboard_title">High Scores</string>
+    <string name="leaderboard_empty">No high scores yet. Play a round!</string>
+
+    <!-- Role 5 Settings & How to Play -->
+    <string name="settings_title">Settings &amp; How to Play</string>
+    <string name="settings_section_appearance">Appearance (Day / Night)</string>
+    <string name="settings_theme_label">Choose color theme</string>
+    <string name="settings_theme_system">System</string>
+    <string name="settings_theme_light">Day</string>
+    <string name="settings_theme_dark">Night</string>
+
+    <string name="settings_section_language">Language (TH / EN)</string>
+    <string name="settings_language_label">Choose app language</string>
+    <string name="settings_language_system">System</string>
+    <string name="settings_language_th">ไทย</string>
+    <string name="settings_language_en">English</string>
+
+    <string name="settings_section_gameplay">Gameplay Feedback</string>
+    <string name="settings_sound_title">Sound Effects (SFX)</string>
+    <string name="settings_sound_desc">Play audio cues on food match or game over</string>
+    <string name="settings_haptic_title">Haptic Vibration</string>
+    <string name="settings_haptic_desc">Vibrate on swipe actions and sudden death</string>
+
+    <string name="settings_section_how_to_play">How to Play</string>
+    <string name="how_to_play_intro">Swipe each item on the conveyor belt to the matching target:</string>
+    <string name="how_to_play_skinny_title">Skinny → Burger (High-Calorie)</string>
+    <string name="how_to_play_skinny_desc">Needs energy! Feed high-calorie foods only.</string>
+    <string name="how_to_play_chubby_title">Chubby → Salad (Clean Food)</string>
+    <string name="how_to_play_chubby_desc">Watching calories! Feed healthy clean foods.</string>
+    <string name="how_to_play_trash_title">Trash Bin → Food Scraps (Hazard)</string>
+    <string name="how_to_play_trash_desc">Discard spoiled items in the bin. Never feed to people!</string>
+    <string name="how_to_play_rule_sudden_death">Sudden Death: One wrong match, trashed good food, or missed item ends the run!</string>
+    <string name="how_to_play_rule_speed">Belt speed increases every 5 points until reaching the speed cap.</string>
+
+    <string name="settings_reset_default">Reset to Defaults</string>
+    <string name="settings_about_footer">CS364 • Fit &amp; Fat: Food Rush v1.0</string>
 </resources>
