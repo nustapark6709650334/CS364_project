@@ -1,7 +1,11 @@
 package com.cs364.foodrush
 
+import com.cs364.foodrush.R
 import com.cs364.foodrush.ui.components.spriteContentBounds
 import com.cs364.foodrush.ui.screens.gameplayArenaLayout
+import com.cs364.foodrush.ui.screens.koRetryBannerPlacement
+import com.cs364.foodrush.ui.screens.resolveRole2FailReasonResId
+import com.cs364.foodrush.ui.screens.resolveRole2FoodNameResId
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -26,5 +30,36 @@ class GameplayLayoutTest {
             assertTrue(l.chubbyHeight * 1.16f + l.sideWidth + 16 < width)
             assertTrue(l.feetInset > l.trashSize)
         }
+    }
+
+    @Test fun koRetryBannerPlacementStaysAboveCharactersOnPortraitScreens() {
+        for ((width, height) in listOf(360f to 640f, 412f to 915f, 800f to 1200f)) {
+            val layout = gameplayArenaLayout(width, height)
+            val hudTopInset = if (height < 680f || width < 360f) 68f else 78f
+            val placement = koRetryBannerPlacement(width, height, hudTopInset, layout)
+            val characterTopY = height - layout.feetInset - layout.skinnyHeight
+            assertTrue(placement.topInset >= hudTopInset)
+            assertTrue(placement.maxWidth <= width)
+            assertTrue(placement.topInset + 132f <= characterTopY)
+        }
+        val landscapeLayout = gameplayArenaLayout(640f, 360f)
+        val landscapePlacement = koRetryBannerPlacement(640f, 360f, 68f, landscapeLayout)
+        assertTrue(landscapePlacement.maxWidth > 0f && landscapePlacement.maxWidth <= 640f)
+        assertTrue(landscapePlacement.maxHeight > 0f)
+    }
+
+    @Test fun role2FailReasonAndFoodNameMappingsCoverAllEngineStrings() {
+        assertEquals(R.string.gameplay_target_skinny_food, resolveRole2FoodNameResId(R.string.food_burger))
+        assertEquals(R.string.gameplay_target_chubby_food, resolveRole2FoodNameResId(R.string.food_salad))
+        assertEquals(R.string.gameplay_target_trash_food, resolveRole2FoodNameResId(R.string.food_scraps))
+
+        assertEquals(R.string.gameplay_ko_fail_clean_to_skinny, resolveRole2FailReasonResId(R.string.fail_fed_clean_to_skinny))
+        assertEquals(R.string.gameplay_ko_fail_high_cal_to_chubby, resolveRole2FailReasonResId(R.string.fail_fed_high_cal_to_chubby))
+        assertEquals(R.string.gameplay_ko_fail_hazard_to_person, resolveRole2FailReasonResId(R.string.fail_fed_hazard_to_person))
+        assertEquals(R.string.gameplay_ko_fail_trashed_good_food, resolveRole2FailReasonResId(R.string.fail_trashed_good_food))
+        assertEquals(R.string.gameplay_ko_fail_missed_item, resolveRole2FailReasonResId(R.string.fail_missed_item))
+
+        assertEquals(123456, resolveRole2FoodNameResId(123456))
+        assertEquals(654321, resolveRole2FailReasonResId(654321))
     }
 }

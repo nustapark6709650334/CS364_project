@@ -277,22 +277,28 @@ fun CharacterTargetZone(
         label = "hazard_rattle"
     )
     val deadDropOffsetDp = remember { Animatable(0f) }
+    val deadSmokeProgress = remember { Animatable(1f) }
     LaunchedEffect(pose) {
         if (pose == CharacterPose.DEAD) {
-            deadDropOffsetDp.snapTo(-6f)
-            deadDropOffsetDp.animateTo(0f, tween(210, easing = FastOutSlowInEasing))
+            deadDropOffsetDp.snapTo(-10f)
+            deadSmokeProgress.snapTo(0f)
+            deadDropOffsetDp.animateTo(0f, tween(180, easing = FastOutSlowInEasing))
+            deadSmokeProgress.animateTo(1f, tween(520, easing = FastOutSlowInEasing))
         } else {
             deadDropOffsetDp.snapTo(0f)
+            deadSmokeProgress.snapTo(1f)
         }
     }
 
     // Keep the pixel silhouette rigid: small whole-dp motion instead of continuous
     // non-uniform scaling and rotation, which shimmer and distort pixel edges.
-    val idleBobDp = if (!enabled) 0f else when (pose) {
-        CharacterPose.DEAD -> deadDropOffsetDp.value.roundToInt().toFloat()
-        CharacterPose.SAD -> 0f
-        CharacterPose.YUMMY -> -2f * idleCycle
-        CharacterPose.IDLE -> if (targetType == TargetType.TRASH) 0f else -idleCycle
+    val idleBobDp = when {
+        pose == CharacterPose.DEAD -> deadDropOffsetDp.value.roundToInt().toFloat()
+        !enabled -> 0f
+        pose == CharacterPose.SAD -> 0f
+        pose == CharacterPose.YUMMY -> -2f * idleCycle
+        pose == CharacterPose.IDLE -> if (targetType == TargetType.TRASH) 0f else -idleCycle
+        else -> 0f
     }.roundToInt().toFloat()
     val idleTiltDeg = if (enabled && targetType == TargetType.TRASH && hasApproachingHazard) {
         hazardRattle * 1.5f
@@ -405,6 +411,63 @@ fun CharacterTargetZone(
                     rotationZ = idleTiltDeg
                 }
         )
+
+        // Small 16-bit pixel dust/smoke puff burst on KO floor impact
+        if (pose == CharacterPose.DEAD && deadSmokeProgress.value > 0.005f && deadSmokeProgress.value < 0.995f) {
+            val smokeProgress = deadSmokeProgress.value
+            val puffAlpha = if (smokeProgress < 0.15f) {
+                (smokeProgress / 0.15f).coerceIn(0f, 1f)
+            } else {
+                (1f - (smokeProgress - 0.15f) / 0.85f).coerceIn(0f, 1f)
+            }
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val step = 2.dp.toPx()
+                fun snap(value: Float): Float = (value / step).roundToInt() * step
+                val baseY = size.height * 0.86f
+                val puffs = arrayOf(
+                    floatArrayOf(0.24f, -16f, -12f, 8f),
+                    floatArrayOf(0.34f, -10f, -18f, 10f),
+                    floatArrayOf(0.42f, -8f, -10f, 6f),
+                    floatArrayOf(0.58f, 8f, -10f, 6f),
+                    floatArrayOf(0.66f, 10f, -18f, 10f),
+                    floatArrayOf(0.76f, 16f, -12f, 8f)
+                )
+                val borderColor = colorScheme.onSurface.copy(alpha = puffAlpha * 0.35f)
+                val fillColor = colorScheme.outline.copy(alpha = puffAlpha * 0.82f)
+                val highlightColor = colorScheme.surface.copy(alpha = puffAlpha * 0.45f)
+
+                for (puff in puffs) {
+                    val cx = snap(size.width * puff[0] + (puff[1] * smokeProgress).dp.toPx())
+                    val cy = snap(baseY + (puff[2] * smokeProgress).dp.toPx())
+                    val puffSize = snap((puff[3] * (0.65f + 0.55f * smokeProgress)).dp.toPx())
+                        .coerceAtLeast(step * 3f)
+                    val half = puffSize * 0.5f
+                    val left = snap(cx - half)
+                    val top = snap(cy - half)
+
+                    drawRect(
+                        color = borderColor,
+                        topLeft = Offset(left, top - step),
+                        size = Size(puffSize, puffSize + step * 2f)
+                    )
+                    drawRect(
+                        color = borderColor,
+                        topLeft = Offset(left - step, top),
+                        size = Size(puffSize + step * 2f, puffSize)
+                    )
+                    drawRect(
+                        color = fillColor,
+                        topLeft = Offset(left, top),
+                        size = Size(puffSize, puffSize)
+                    )
+                    drawRect(
+                        color = highlightColor,
+                        topLeft = Offset(left + step, top + step),
+                        size = Size(step, step)
+                    )
+                }
+            }
+        }
 
         // Floating "+1" pixel arcade popup right above character when fed
         if (plusOneAlpha.value > 0.01f) {
