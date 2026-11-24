@@ -31,8 +31,15 @@
 | **Chubby (คนอ้วน)** | คุมน้ำหนัก/รักสุขภาพ | Clean food: Salad, Broccoli, Apple, Boiled Chicken | Fast food or Hazard → **Game Over** |
 | **Trash (ถังขยะ)** | กำจัดสิ่งอันตราย | Hazards: Plastic straw, Fishbone, Spoiled food, Bomb | Any real food → **Game Over** |
 
-### Controls, Speed Cap & Haptics
-- **Controls:** Central lane/conveyor + 3 action buttons at bottom: **Left (Skinny)**, **Center (Trash)**, **Right (Chubby)** (optional: swipe gestures).
+### Controls, Visual Style (16-Bit Pixel Art), Speed Cap & Haptics
+- **Visual Style & Reference Mockups (Locked — Option 1 + Style 3: 16-Bit Pixel Art Arcade):**
+  - **UI Reference Mockups (`docs/ui/`):**
+    - `docs/ui/ui_pixel_mainmenu.png` — `MainMenuScreen`: Shows the 3 pixel-art mascots (`R.drawable.char_skinny`, `R.drawable.char_trash`, `R.drawable.char_chubby`), High Score banner, and 3 arcade buttons (`Play Game`, `Score History`, `Settings & How-To`).
+    - `docs/ui/ui_pixel_gameplay.png` — `GameplayScreen`: Vertical conveyor belt in the center; **Skinny character (`R.drawable.char_skinny`) stands on the Left**, **Chubby character (`R.drawable.char_chubby`) stands on the Right**, and **Trash Bin (`R.drawable.char_trash`) sits at the Bottom Center**.
+    - `docs/ui/ui_pixel_subscreens.png` — `GameOverScreen`, `ScoreHistoryScreen` (with `ConfirmDeleteDialog`), and `SettingsScreen` in 16-Bit Pixel Art Arcade card style.
+  - **Pre-loaded 16-Bit Pixel Art Sprites (`app/src/main/res/drawable-nodpi/`):** `char_skinny.png`, `char_chubby.png`, `char_trash.png`, `food_burger.png`, `food_salad.png`, `food_hazard.png` (transparent PNGs; render with `FilterQuality.None` in Compose to keep pixel art crisp).
+- **Controls (Drag / Swipe Food to Character):**
+  - Players **drag / slide (เลื่อน/ปัด) the food item plate from the center conveyor directly onto the character image**: **Left → Skinny (`char_skinny`)**, **Right → Chubby (`char_chubby`)**, or **Down/Bottom → Trash Bin (`char_trash`)** (also support tapping the character target directly for accessibility).
 - **Speed Scaling & Cap:**
   $$v(s) = \min\left(v_{\max},\; v_0 + k \cdot \left\lfloor \frac{s}{5} \right\rfloor\right)$$
   - Starts at $v_0$, increases every 5 points until reaching $v_{\max}$ (then speed stays capped so touch input stays fair).

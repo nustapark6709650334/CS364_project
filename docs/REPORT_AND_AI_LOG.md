@@ -54,6 +54,7 @@
 | วันที่ | ผู้ใช้ | เครื่องมือ AI | ไฟล์ / ฟีเจอร์ | ส่วนที่นำมาจาก AI | ส่วนที่ทีมพัฒนา / ปรับแก้เอง |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `2026-11-21` | ทีม | Antigravity | เอกสารวางแผนโครงงาน (`README.md`, `docs/*.md`) | ช่วยจัดโครงสร้างเอกสาร กฎทีม และแมปเกณฑ์ CS364 | ทีมออกแบบไอเดียเกมต้นแบบ (2 ตัวละคร, Speed Cap, Haptics) และกำหนดกติกา |
+| `2026-11-24` | ทีม | Antigravity Image Gen | ออกแบบ UI Mockup (`docs/ui/*.png`) และ 16-Bit Pixel Art Sprites (`res/drawable-nodpi/*.png`) | สร้างภาพตัวอย่าง UI หลายสไตล์และเจน Sprite ตัวละคร/อาหารตามบรีฟ | ทีมคัดเลือกโครงหน้าจอ Option 1 (ลากอาหารไปป้อนตัวละคร ซ้าย/ขวา/ถังขยะล่าง) และเลือกลายเส้น Style 3 (16-Bit Pixel Art) พร้อมตัดพื้นหลังโปร่งใส |
 | `<YYYY-MM-DD>` | `<ชื่อ>` | `<AI>` | `<ไฟล์>` | `<ส่วนที่ AI ช่วย>` | `<ส่วนที่แก้และเขียนต่อเอง>` |
 
 *ส่วนที่พัฒนาเอง 100% โดยไม่ใช้ AI:* `<ระบุชื่อไฟล์/โมดูล และผู้พัฒนา>`
@@ -61,7 +62,9 @@
 ### 3.2 สื่อ รูปภาพ ไอคอน เสียง และฟอนต์ (Media & Assets)
 | ประเภท | ชื่อไฟล์ | แหล่งที่มา / URL | License | การปรับแต่งโดยทีม |
 | :--- | :--- | :--- | :--- | :--- |
-| ตัวละคร / อาหาร | `<เช่น char_skinny.png>` | `<วาดเอง / OpenGameArt / ฯลฯ>` | `<เช่น CC0 / วาดเอง>` | `<เช่น ตัดพื้นหลัง/ทำ 2 เฟรม>` |
+| ตัวละคร 16-Bit Pixel Art | `char_skinny.png`, `char_chubby.png`, `char_trash.png` | สร้างด้วย AI Image Generator ตามบรีฟของทีม (`app/src/main/res/drawable-nodpi/`) | ใช้งานในโปรเจกต์การศึกษา CS364 | คุมสไตล์ 16-Bit Pixel Art และตัดพื้นหลังขาวให้โปร่งใส (Transparent PNG) |
+| ไอเทมอาหาร & ขยะ 16-Bit Pixel Art | `food_burger.png`, `food_salad.png`, `food_hazard.png` | สร้างด้วย AI Image Generator ตามบรีฟของทีม (`app/src/main/res/drawable-nodpi/`) | ใช้งานในโปรเจกต์การศึกษา CS364 | แยกชิ้นส่วนจานอาหาร 3 ประเภทและตัดพื้นหลังให้โปร่งใส |
+| ภาพต้นแบบ UI 5 หน้าจอ | `ui_pixel_mainmenu.png`, `ui_pixel_gameplay.png`, `ui_pixel_subscreens.png` | สร้างด้วย AI Image Generator (`docs/ui/`) | ใช้งานในโปรเจกต์การศึกษา CS364 | ทีมเลือกเลย์เอาต์ Option 1 + ลายเส้น Style 3 (16-Bit Pixel Art) |
 | เสียง / ฟอนต์ | `<เช่น sfx_eat.wav>` | `<Freesound / Google Fonts>` | `<CC0 / OFL>` | `<เช่น ตัดเสียงสั้นลง>` |
 
 ### 3.3 ไลบรารีและโค้ดอ้างอิงภายนอก (Libraries & References)
