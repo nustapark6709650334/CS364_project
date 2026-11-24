@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -59,7 +60,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -107,11 +111,16 @@ fun GameplayScreen(
     val latestPauseAudio by rememberUpdatedState(onPauseAudio)
     val latestResumeAudio by rememberUpdatedState(onResumeAudio)
 
-    val engine = remember(gameEngine) {
-        gameEngine ?: GameEngine(
-            onCorrectMatch = { latestCorrectFeedback() },
-            onSpeedLevelUp = { newLevel -> latestSpeedUpFeedback(newLevel) }
-        )
+    // The navigation entry owns this model, so Activity recreation keeps the same engine.
+    val session: GameplaySessionViewModel = viewModel()
+    val engine = gameEngine ?: session.engine
+    DisposableEffect(session) {
+        session.onCorrectMatch = { latestCorrectFeedback() }
+        session.onSpeedLevelUp = { latestSpeedUpFeedback(it) }
+        onDispose {
+            session.onCorrectMatch = {}
+            session.onSpeedLevelUp = {}
+        }
     }
 
     val uiState by engine.uiState.collectAsStateWithLifecycle()
@@ -125,10 +134,11 @@ fun GameplayScreen(
 
     var skinnyIsYummy by remember { mutableStateOf(false) }
     var chubbyIsYummy by remember { mutableStateOf(false) }
-    var lastWrongTarget by remember { mutableStateOf<TargetType?>(null) }
+    var lastWrongTarget by rememberSaveable { mutableStateOf<TargetType?>(null) }
 
     val shakeOffsetX = remember { Animatable(0f) }
-    var gameOverNavigated by remember { mutableStateOf(false) }
+    var gameOverNavigated by rememberSaveable { mutableStateOf(false) }
+    var gameOverFeedbackPlayed by rememberSaveable { mutableStateOf(false) }
 
     val triggerPause: () -> Unit = {
         if (!engine.uiState.value.isGameOver) {
@@ -140,17 +150,20 @@ fun GameplayScreen(
     }
 
     // Back Navigation Guard (Rubric 4.2): Back pauses & asks confirmation instead of dropping out
-    BackHandler(enabled = !uiState.isGameOver) {
+    BackHandler {
         triggerPause()
     }
 
     // Activity Lifecycle Safety (Rubric 4.4): ON_PAUSE / ON_STOP immediately pause & preserve state
     val lifecycleOwner = LocalLifecycleOwner.current
+    val lifecycleState by lifecycleOwner.lifecycle.currentStateFlow.collectAsStateWithLifecycle()
     DisposableEffect(lifecycleOwner, engine) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_PAUSE,
-                Lifecycle.Event.ON_STOP -> triggerPause()
+                Lifecycle.Event.ON_STOP -> {
+                    if (engine.uiState.value.isGameOver) latestPauseAudio() else triggerPause()
+                }
                 Lifecycle.Event.ON_RESUME -> {
                     if (engine.uiState.value.isPaused && !engine.uiState.value.isGameOver) {
                         showPauseDialog = true
@@ -162,6 +175,8 @@ fun GameplayScreen(
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
+            engine.pauseGame()
+            latestPauseAudio()
         }
     }
 
@@ -182,8 +197,8 @@ fun GameplayScreen(
     }
 
     // Delta Time (dt) loop: resets lastFrameNanos whenever resumed so dt never spikes.
-    LaunchedEffect(engine, uiState.isPaused, uiState.isGameOver) {
-        if (!uiState.isPaused && !uiState.isGameOver) {
+    LaunchedEffect(engine, uiState.isPaused, uiState.isGameOver, lifecycleState) {
+        if (lifecycleState.isAtLeast(Lifecycle.State.RESUMED) && !uiState.isPaused && !uiState.isGameOver) {
             var lastFrameNanos = 0L
             while (isActive) {
                 withFrameNanos { frameNanos ->
@@ -201,31 +216,36 @@ fun GameplayScreen(
     }
 
     // Sudden Death screen shake + KO / crying reaction beat before navigating to GameOverScreen.
-    LaunchedEffect(uiState.isGameOver) {
+    LaunchedEffect(engine, uiState.isGameOver) {
         if (uiState.isGameOver && !gameOverNavigated) {
-            gameOverNavigated = true
             highlightedTarget = null
             skinnyIsYummy = false
             chubbyIsYummy = false
-            latestGameOverFeedback()
-            val shakeSequence = listOf(14f, -14f, 10f, -10f, 6f, -6f, 0f)
-            for (targetX in shakeSequence) {
-                shakeOffsetX.animateTo(
-                    targetValue = targetX,
-                    animationSpec = tween(durationMillis = 52)
-                )
+            lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                if (!gameOverNavigated) {
+                    if (!gameOverFeedbackPlayed) {
+                        latestGameOverFeedback()
+                        gameOverFeedbackPlayed = true
+                    }
+                    val shakeSequence = listOf(14f, -14f, 10f, -10f, 6f, -6f, 0f)
+                    for (targetX in shakeSequence) {
+                        shakeOffsetX.animateTo(targetX, tween(durationMillis = 52))
+                    }
+                    delay(950L)
+                    gameOverNavigated = true
+                    latestNavigateToGameOver(
+                        uiState.score,
+                        uiState.failReasonTemplateResId,
+                        uiState.failFoodNameResId
+                    )
+                }
             }
-            delay(950L)
-            latestNavigateToGameOver(
-                uiState.score,
-                uiState.failReasonTemplateResId,
-                uiState.failFoodNameResId
-            )
         } else if (!uiState.isGameOver) {
             lastWrongTarget = null
             skinnyIsYummy = false
             chubbyIsYummy = false
             gameOverNavigated = false
+            gameOverFeedbackPlayed = false
             shakeOffsetX.snapTo(0f)
         }
     }
@@ -257,7 +277,9 @@ fun GameplayScreen(
         trashFedTick = trashFedTick,
         shakeOffsetDp = shakeOffsetX.value,
         onHighlightTargetChange = { highlightedTarget = it },
-        onSubmitItem = { itemId, target ->
+        onSubmitItem = submit@{ itemId, target ->
+            if (!lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) ||
+                engine.uiState.value.isPaused || engine.uiState.value.isGameOver) return@submit
             val prevScore = engine.uiState.value.score
             engine.submitItemToTarget(itemId = itemId, target = target)
             val afterState = engine.uiState.value
@@ -289,6 +311,7 @@ fun GameplayScreen(
             score = uiState.score,
             speedLabel = speedLabel,
             onResume = {
+                if (!lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return@PauseExitDialog
                 showPauseDialog = false
                 engine.resumeGame()
                 latestResumeAudio()
@@ -302,7 +325,7 @@ fun GameplayScreen(
 }
 
 @Composable
-private fun GameplayBoardContent(
+internal fun GameplayBoardContent(
     uiState: GameUiState,
     beltScrollPhase: Float,
     highlightedTarget: TargetType?,
@@ -333,7 +356,8 @@ private fun GameplayBoardContent(
         modifier = modifier
             .fillMaxSize()
             .background(colorScheme.surface)
-            .pointerInput(Unit) {
+            .pointerInput(uiState.isPaused, uiState.isGameOver) {
+                if (uiState.isPaused || uiState.isGameOver) return@pointerInput
                 detectDragGestures(
                     onDragStart = { arenaSwipeOffset = Offset.Zero },
                     onDrag = { change, dragAmount ->
@@ -364,10 +388,10 @@ private fun GameplayBoardContent(
     ) {
         val compactMode = maxHeight < 680.dp || maxWidth < 360.dp
 
-        // Layer 1: Authentic 16-bit Diner Kitchen Wall, Cabinets & 8-Column Checkered Floor
+        // Layer 1: Authentic 16-bit Diner Kitchen Wall, Recessed Cabinets & 8-Column Checkered Floor
         Canvas(modifier = Modifier.fillMaxSize()) {
-            val wallHeight = size.height * 0.055f
-            val cabinetBottom = size.height * 0.165f
+            val cabinetBottom = if (compactMode) 88.dp.toPx() else 104.dp.toPx()
+            val wallHeight = cabinetBottom * 0.34f
             val counterThickness = 4.dp.toPx()
 
             // Upper diner wall strip
@@ -383,13 +407,38 @@ private fun GameplayBoardContent(
                 topLeft = Offset(0f, wallHeight),
                 size = Size(size.width, cabinetBottom - wallHeight)
             )
-            val panelWidth = size.width / 5f
-            for (i in 1..4) {
-                val x = panelWidth * i
+            val panelCount = 5
+            val panelWidth = size.width / panelCount
+            val inset = 4.dp.toPx()
+            val frameColor = colorScheme.onSurface.copy(alpha = 0.28f)
+            val frameHighlight = colorScheme.surface.copy(alpha = 0.25f)
+            for (i in 0 until panelCount) {
+                val left = panelWidth * i
+                if (i > 0) {
+                    drawRect(
+                        color = frameColor,
+                        topLeft = Offset(left, wallHeight),
+                        size = Size(2.dp.toPx(), cabinetBottom - wallHeight)
+                    )
+                }
+                // Recessed cabinet door frame & pixel handle
+                val doorTop = wallHeight + inset
+                val doorW = (panelWidth - inset * 2f).coerceAtLeast(0f)
+                val doorH = (cabinetBottom - wallHeight - inset * 2f).coerceAtLeast(0f)
                 drawRect(
-                    color = colorScheme.onSurface.copy(alpha = 0.25f),
-                    topLeft = Offset(x, wallHeight + 2.dp.toPx()),
-                    size = Size(2.dp.toPx(), cabinetBottom - wallHeight - 4.dp.toPx())
+                    color = frameColor,
+                    topLeft = Offset(left + inset, doorTop),
+                    size = Size(doorW, 2.dp.toPx())
+                )
+                drawRect(
+                    color = frameHighlight,
+                    topLeft = Offset(left + inset, doorTop + doorH - 2.dp.toPx()),
+                    size = Size(doorW, 2.dp.toPx())
+                )
+                drawRect(
+                    color = frameColor,
+                    topLeft = Offset(left + panelWidth - inset * 2f, doorTop + doorH - 8.dp.toPx()),
+                    size = Size(4.dp.toPx(), 4.dp.toPx())
                 )
             }
 
@@ -425,7 +474,7 @@ private fun GameplayBoardContent(
             }
         }
 
-        // Layer 2 & 3: Safe-area interactive arena & floating Top HUD
+        // Layer 2 & 3: Safe-area interactive arena & floating Top HUD (locked 1:1 pixel scale)
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
@@ -434,55 +483,29 @@ private fun GameplayBoardContent(
         ) {
             val arenaW = maxWidth
             val arenaH = maxHeight
-            val beltWidth = (arenaW * 0.31f).coerceIn(104.dp, 146.dp)
-            val sideSpace = ((arenaW - beltWidth) / 2f).coerceAtLeast(78.dp)
+            val layout = gameplayArenaLayout(arenaW.value, arenaH.value)
+            val beltWidth = layout.beltWidth.dp
+            val trashSize = layout.trashSize.dp
+            val beltHeight = (arenaH - trashSize - 8.dp).coerceAtLeast(1.dp)
+            val hudTopInset = if (compactMode) 68.dp else 78.dp
+            val feetBottomOffset = layout.feetInset.dp
+            val actualSkinnyW = (if (skinnyPose == CharacterPose.DEAD) layout.skinnyHeight else layout.sideWidth).dp
+            val actualSkinnyH = (if (skinnyPose == CharacterPose.DEAD) layout.skinnyHeight * 0.31f else layout.skinnyHeight).dp
+            val actualChubbyW = (if (chubbyPose == CharacterPose.DEAD) layout.chubbyHeight * 1.16f else layout.sideWidth).dp
+            val actualChubbyH = (if (chubbyPose == CharacterPose.DEAD) layout.chubbyHeight * 0.53f else layout.chubbyHeight).dp
+            val skinnyStartPad = 8.dp
+            val chubbyEndPad = 8.dp
 
-            val trashSize = (arenaH * 0.185f).coerceIn(84.dp, 128.dp)
-            val beltHeight = (arenaH - trashSize * 0.78f).coerceAtLeast(240.dp)
-            val hudTopInset = if (compactMode) 60.dp else 72.dp
-
-            val skinnyHeight = (arenaH * 0.44f).coerceIn(176.dp, 286.dp)
-            val skinnyWidth = (sideSpace * 0.96f).coerceIn(88.dp, 152.dp)
-            val chubbyHeight = (arenaH * 0.35f).coerceIn(146.dp, 232.dp)
-            val chubbyWidth = (sideSpace * 1.00f).coerceIn(92.dp, 166.dp)
-            val feetBottomOffset = arenaH * 0.25f
-
-            val actualSkinnyW = when (skinnyPose) {
-                CharacterPose.DEAD -> (sideSpace * 1.24f).coerceIn(112.dp, 198.dp)
-                else -> skinnyWidth
-            }
-            val actualSkinnyH = when (skinnyPose) {
-                CharacterPose.DEAD -> (arenaH * 0.23f).coerceIn(92.dp, 152.dp)
-                CharacterPose.SAD -> skinnyHeight * 0.78f
-                else -> skinnyHeight
-            }
-            val skinnyStartPad = when (skinnyPose) {
-                CharacterPose.DEAD -> 4.dp
-                else -> (sideSpace - actualSkinnyW).coerceAtLeast(2.dp)
-            }
-
-            val actualChubbyW = when (chubbyPose) {
-                CharacterPose.DEAD -> (sideSpace * 1.24f).coerceIn(112.dp, 198.dp)
-                else -> chubbyWidth
-            }
-            val actualChubbyH = when (chubbyPose) {
-                CharacterPose.DEAD -> (arenaH * 0.23f).coerceIn(92.dp, 152.dp)
-                CharacterPose.SAD -> chubbyHeight * 0.80f
-                else -> chubbyHeight
-            }
-            val chubbyEndPad = when (chubbyPose) {
-                CharacterPose.DEAD -> 4.dp
-                else -> (sideSpace - actualChubbyW).coerceAtLeast(2.dp)
-            }
-
-            // Left Character: Skinny standing / belly-rub / collapsed dead / kneeling crying
+            // Left Character: Skinny (exact 1:1 sprite pixel scale across all 4 poses)
             CharacterTargetZone(
                 targetType = TargetType.SKINNY,
                 isHighlighted = highlightedTarget == TargetType.SKINNY,
                 pose = skinnyPose,
+                enabled = !uiState.isPaused && !uiState.isGameOver,
                 reactionTick = skinnyFedTick,
                 onSelectTarget = { onSubmitItem(null, it) },
                 modifier = Modifier
+                    .zIndex(if (skinnyPose == CharacterPose.DEAD) 5f else 0f)
                     .align(Alignment.BottomStart)
                     .padding(
                         start = skinnyStartPad,
@@ -491,14 +514,16 @@ private fun GameplayBoardContent(
                     .size(width = actualSkinnyW, height = actualSkinnyH)
             )
 
-            // Right Character: Chubby standing / belly-rub / collapsed dead / kneeling crying
+            // Right Character: Chubby (exact 1:1 sprite pixel scale across all 4 poses)
             CharacterTargetZone(
                 targetType = TargetType.CHUBBY,
                 isHighlighted = highlightedTarget == TargetType.CHUBBY,
                 pose = chubbyPose,
+                enabled = !uiState.isPaused && !uiState.isGameOver,
                 reactionTick = chubbyFedTick,
                 onSelectTarget = { onSubmitItem(null, it) },
                 modifier = Modifier
+                    .zIndex(if (chubbyPose == CharacterPose.DEAD) 5f else 0f)
                     .align(Alignment.BottomEnd)
                     .padding(
                         end = chubbyEndPad,
@@ -510,19 +535,22 @@ private fun GameplayBoardContent(
             // Bottom Center: Trash Bin aligned under the bottom exit of the belt
             CharacterTargetZone(
                 targetType = TargetType.TRASH,
+                enabled = !uiState.isPaused && !uiState.isGameOver,
                 isHighlighted = highlightedTarget == TargetType.TRASH,
                 reactionTick = trashFedTick,
                 hasApproachingHazard = hasApproachingHazard,
                 onSelectTarget = { onSubmitItem(null, it) },
                 modifier = Modifier
+                    .zIndex(1f)
                     .align(Alignment.BottomCenter)
-                    .offset(x = trashSize * 0.11f, y = (-6).dp)
+                    .offset(y = (-8).dp)
                     .size(trashSize)
             )
 
-            // Center Full-Height Vertical Conveyor Belt & Draggable Food Plates (drawn on top when dragged)
+            // Center Full-Height Vertical Conveyor Belt & Draggable Food Plates
             ConveyorBeltLane(
                 items = uiState.items,
+                enabled = !uiState.isPaused && !uiState.isGameOver,
                 beltScrollPhase = beltScrollPhase,
                 compactMode = compactMode,
                 dragThresholdPx = dragThresholdPx,
@@ -530,6 +558,7 @@ private fun GameplayBoardContent(
                 onHighlightTargetChange = onHighlightTargetChange,
                 onSubmitItem = onSubmitItem,
                 modifier = Modifier
+                    .zIndex(2f)
                     .align(Alignment.TopCenter)
                     .width(beltWidth)
                     .height(beltHeight)
@@ -541,6 +570,7 @@ private fun GameplayBoardContent(
                 compactMode = compactMode,
                 onPauseClick = onPauseClick,
                 modifier = Modifier
+                    .zIndex(6f)
                     .align(Alignment.TopCenter)
                     .fillMaxWidth()
                     .padding(horizontal = if (compactMode) 8.dp else 12.dp, vertical = 8.dp)
@@ -618,6 +648,7 @@ private fun GameplayTopHud(
             SegmentedSpeedBar(
                 progressFraction = uiState.speedProgress,
                 isHighlighted = uiState.showSpeedUpBanner || uiState.isAtMaxSpeed,
+                compactMode = compactMode,
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -625,7 +656,7 @@ private fun GameplayTopHud(
         // Right: Stepped 16-bit Pixel Pause Keycap (48.dp minimum touch target)
         PixelArcadeBox(
             modifier = Modifier
-                .size(48.dp)
+                .size(if (compactMode) 48.dp else 54.dp)
                 .semantics { contentDescription = pauseCd }
                 .clickable(role = Role.Button, onClick = onPauseClick),
             fillColor = colorScheme.inverseSurface,
@@ -662,6 +693,7 @@ private fun ScoreHudCard(
         contentAlignment = Alignment.TopEnd
     ) {
         PixelArcadeBox(
+            modifier = Modifier.defaultMinSize(minWidth = if (compactMode) 88.dp else 100.dp),
             fillColor = colorScheme.inverseSurface,
             borderColor = colorScheme.onSurface,
             contentPadding = PaddingValues(
@@ -722,6 +754,7 @@ private fun ScoreHudCard(
 private fun SegmentedSpeedBar(
     progressFraction: Float,
     isHighlighted: Boolean,
+    compactMode: Boolean,
     modifier: Modifier = Modifier
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -731,7 +764,7 @@ private fun SegmentedSpeedBar(
         .coerceIn(1, totalSegments)
 
     PixelArcadeBox(
-        modifier = modifier.height(24.dp),
+        modifier = modifier.height(if (compactMode) 26.dp else 32.dp),
         fillColor = colorScheme.inverseSurface,
         borderColor = colorScheme.onSurface,
         cornerStep = 3.dp,
@@ -771,7 +804,7 @@ private fun SegmentedSpeedBar(
 
 @Preview(name = "Compact Day — Yummy Belly Rub (360x640)", widthDp = 360, heightDp = 640, showBackground = true)
 @Composable
-private fun GameplayCompactDayPreview() {
+internal fun GameplayCompactDayPreview() {
     MaterialTheme(colorScheme = lightColorScheme()) {
         val sampleItems = listOf(
             ActiveFoodItem(id = 1L, type = FoodType.BURGER, yProgress = 0.24f),
@@ -805,7 +838,7 @@ private fun GameplayCompactDayPreview() {
 
 @Preview(name = "KO Scene — Skinny Dead & Chubby Sad (360x640)", widthDp = 360, heightDp = 640, showBackground = true)
 @Composable
-private fun GameplaySkinnyDeadChubbySadPreview() {
+internal fun GameplaySkinnyDeadChubbySadPreview() {
     MaterialTheme(colorScheme = lightColorScheme()) {
         val sampleItems = listOf(
             ActiveFoodItem(id = 1L, type = FoodType.BURGER, yProgress = 0.32f),
@@ -837,7 +870,7 @@ private fun GameplaySkinnyDeadChubbySadPreview() {
 
 @Preview(name = "KO Scene — Chubby Dead & Skinny Sad (412x915)", widthDp = 412, heightDp = 915, showBackground = true)
 @Composable
-private fun GameplayLargeNightPreview() {
+internal fun GameplayLargeNightPreview() {
     MaterialTheme(colorScheme = darkColorScheme()) {
         val sampleItems = listOf(
             ActiveFoodItem(id = 1L, type = FoodType.BURGER, yProgress = 0.22f),
@@ -871,7 +904,7 @@ private fun GameplayLargeNightPreview() {
 
 @Preview(name = "LIVE PLAYABLE (Click Interactive Mode)", widthDp = 390, heightDp = 844, showBackground = true)
 @Composable
-private fun GameplayLiveInteractivePreview() {
+internal fun GameplayLiveInteractivePreview() {
     MaterialTheme(colorScheme = lightColorScheme()) {
         GameplayScreen()
     }

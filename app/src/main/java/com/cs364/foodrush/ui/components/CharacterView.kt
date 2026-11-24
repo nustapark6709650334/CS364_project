@@ -40,11 +40,15 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.painter.BitmapPainter
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -86,7 +90,7 @@ fun resolveDragTarget(dragX: Float, dragY: Float, thresholdPx: Float): TargetTyp
  * - [IDLE]: Waiting eagerly by the conveyor belt
  * - [YUMMY]: Happy belly-rub after receiving the right food
  * - [DEAD]: Collapsed flat on the floor with `X_X` eyes after wrong food/hazard
- * - [SAD]: Kneeling on the floor crying `T_T` when the other character collapses
+ * - [SAD]: Standing and wiping tears `T_T` when the other character collapses
  */
 enum class CharacterPose {
     IDLE,
@@ -105,13 +109,24 @@ fun PixelSpriteImage(
     modifier: Modifier = Modifier,
     alignment: Alignment = Alignment.Center
 ) {
-    val bitmap = ImageBitmap.imageResource(id = resId)
+    val resources = LocalContext.current.resources
+    val configuration = LocalConfiguration.current
+    val painters = remember(resources, configuration) { mutableMapOf<Int, BitmapPainter>() }
+    // Crop only at draw time: source PNGs and their alpha remain untouched.
+    // Ignore near-transparent generator speckles when measuring the silhouette.
+    val painter = painters.getOrPut(resId) {
+        val bitmap = ImageBitmap.imageResource(resources, resId)
+        val pixels = IntArray(bitmap.width * bitmap.height)
+        bitmap.readPixels(pixels)
+        val bounds = spriteContentBounds(pixels, bitmap.width, bitmap.height)
+        BitmapPainter(bitmap, IntOffset(bounds.left, bounds.top),
+            IntSize(bounds.width, bounds.height), FilterQuality.None)
+    }
     Image(
-        bitmap = bitmap,
+        painter = painter,
         contentDescription = contentDescription,
         alignment = alignment,
         contentScale = ContentScale.Fit,
-        filterQuality = FilterQuality.None,
         modifier = modifier
     )
 }
@@ -205,6 +220,7 @@ fun CharacterTargetZone(
     targetType: TargetType,
     isHighlighted: Boolean,
     pose: CharacterPose = CharacterPose.IDLE,
+    enabled: Boolean = true,
     reactionTick: Int = 0,
     hasApproachingHazard: Boolean = false,
     onSelectTarget: (TargetType) -> Unit,
@@ -240,9 +256,9 @@ fun CharacterTargetZone(
         animationSpec = infiniteRepeatable(
             animation = tween(
                 durationMillis = when {
-                    pose == CharacterPose.YUMMY -> 320
-                    targetType == TargetType.SKINNY -> 620
-                    targetType == TargetType.CHUBBY -> 780
+                    pose == CharacterPose.YUMMY -> 480
+                    targetType == TargetType.SKINNY -> 1100
+                    targetType == TargetType.CHUBBY -> 1300
                     else -> 680
                 },
                 easing = FastOutSlowInEasing
@@ -260,79 +276,39 @@ fun CharacterTargetZone(
         ),
         label = "hazard_rattle"
     )
-    val sadTremble by infiniteTransition.animateFloat(
-        initialValue = -1f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 155, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "sad_tremble"
-    )
-
     val deadDropOffsetDp = remember { Animatable(0f) }
     LaunchedEffect(pose) {
         if (pose == CharacterPose.DEAD) {
-            deadDropOffsetDp.snapTo(-22f)
+            deadDropOffsetDp.snapTo(-6f)
             deadDropOffsetDp.animateTo(0f, tween(210, easing = FastOutSlowInEasing))
         } else {
             deadDropOffsetDp.snapTo(0f)
         }
     }
 
-    val idleBobDp = when (pose) {
-        CharacterPose.DEAD -> deadDropOffsetDp.value
-        CharacterPose.SAD -> -1.6f * abs(sadTremble)
-        CharacterPose.YUMMY -> -7f * idleCycle
-        CharacterPose.IDLE -> when (targetType) {
-            TargetType.SKINNY -> -5f * idleCycle
-            TargetType.CHUBBY -> -4f * idleCycle
-            TargetType.TRASH -> if (hasApproachingHazard) -2.5f * abs(hazardRattle) else -1.5f * idleCycle
-        }
-    }
-    val idleScaleY = when (pose) {
-        CharacterPose.DEAD -> 1.0f
-        CharacterPose.SAD -> 0.985f + 0.025f * abs(sadTremble)
-        CharacterPose.YUMMY -> 0.97f + 0.055f * idleCycle
-        CharacterPose.IDLE -> when (targetType) {
-            TargetType.SKINNY -> 0.98f + 0.045f * idleCycle
-            TargetType.CHUBBY -> 1.02f - 0.04f * idleCycle
-            TargetType.TRASH -> 0.985f + 0.03f * idleCycle
-        }
-    }
-    val idleScaleX = when (pose) {
-        CharacterPose.DEAD -> 1.0f
-        CharacterPose.SAD -> 1.0f
-        CharacterPose.YUMMY -> 1.03f - 0.04f * idleCycle
-        CharacterPose.IDLE -> when (targetType) {
-            TargetType.SKINNY -> 1.02f - 0.03f * idleCycle
-            TargetType.CHUBBY -> 0.98f + 0.045f * idleCycle
-            TargetType.TRASH -> 1.015f - 0.025f * idleCycle
-        }
-    }
-    val idleTiltDeg = when (pose) {
-        CharacterPose.DEAD -> 0f
-        CharacterPose.SAD -> sadTremble * 1.4f
-        CharacterPose.YUMMY -> -2.2f + 4.4f * idleCycle
-        CharacterPose.IDLE -> when (targetType) {
-            TargetType.SKINNY -> -1.2f + 2.4f * idleCycle
-            TargetType.CHUBBY -> -1.6f + 3.2f * idleCycle
-            TargetType.TRASH -> if (hasApproachingHazard) hazardRattle * 3.5f else 0f
-        }
-    }
-
+    // Keep the pixel silhouette rigid: small whole-dp motion instead of continuous
+    // non-uniform scaling and rotation, which shimmer and distort pixel edges.
+    val idleBobDp = if (!enabled) 0f else when (pose) {
+        CharacterPose.DEAD -> deadDropOffsetDp.value.roundToInt().toFloat()
+        CharacterPose.SAD -> 0f
+        CharacterPose.YUMMY -> -2f * idleCycle
+        CharacterPose.IDLE -> if (targetType == TargetType.TRASH) 0f else -idleCycle
+    }.roundToInt().toFloat()
+    val idleTiltDeg = if (enabled && targetType == TargetType.TRASH && hasApproachingHazard) {
+        hazardRattle * 1.5f
+    } else 0f
     // Layer 2: Drag-hover eager lunge toward belt
-    val canInteract = pose != CharacterPose.DEAD && pose != CharacterPose.SAD
+    val canInteract = enabled && pose != CharacterPose.DEAD && pose != CharacterPose.SAD
     val hoverScale by animateFloatAsState(
-        targetValue = if (isHighlighted && canInteract) 1.11f else 1.0f,
+        targetValue = if (isHighlighted && canInteract) 1.03f else 1.0f,
         animationSpec = tween(durationMillis = 120),
         label = "hover_scale"
     )
     val hoverLeanXDp by animateFloatAsState(
         targetValue = when {
             !isHighlighted || !canInteract -> 0f
-            targetType == TargetType.SKINNY -> 8f
-            targetType == TargetType.CHUBBY -> -8f
+            targetType == TargetType.SKINNY -> 3f
+            targetType == TargetType.CHUBBY -> -3f
             else -> 0f
         },
         animationSpec = tween(durationMillis = 120),
@@ -353,8 +329,8 @@ fun CharacterTargetZone(
         if (reactionTick > 0) {
             launch {
                 chompScale.snapTo(1f)
-                chompScale.animateTo(0.84f, tween(60))
-                chompScale.animateTo(1.16f, tween(100))
+                chompScale.animateTo(0.98f, tween(80))
+                chompScale.animateTo(1.03f, tween(120))
                 chompScale.animateTo(1.0f, tween(110))
             }
             launch {
@@ -379,23 +355,25 @@ fun CharacterTargetZone(
             ) { onSelectTarget(targetType) },
         contentAlignment = Alignment.BottomCenter
     ) {
-        // Pixel floor oval shadow directly beneath shoes / kneeling knees / collapsed body
+        // Pixel floor oval shadow aligned directly beneath shoes / kneeling knees / collapsed body
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
         ) {
             val shadowWidth = when {
                 pose == CharacterPose.DEAD -> size.width * 0.88f
-                targetType == TargetType.TRASH -> size.width * 0.72f
-                targetType == TargetType.CHUBBY -> size.width * 0.76f
-                else -> size.width * 0.70f
+                targetType == TargetType.SKINNY -> size.width * 0.48f
+                targetType == TargetType.CHUBBY -> size.width * 0.62f
+                else -> size.width * 0.72f
             }
             val shadowHeight = (size.height * 0.085f).coerceIn(10.dp.toPx(), 22.dp.toPx())
-            val shadowLeft = when (targetType) {
-                TargetType.TRASH -> (size.width - shadowWidth) * 0.36f
-                else -> (size.width - shadowWidth) * 0.5f
+            val shadowLeft = when {
+                pose != CharacterPose.IDLE -> (size.width - shadowWidth) * 0.5f
+                targetType == TargetType.SKINNY -> size.width * 0.08f
+                targetType == TargetType.CHUBBY -> size.width * 0.28f
+                else -> (size.width - shadowWidth) * 0.36f
             }
-            val shadowTop = size.height - shadowHeight * 0.85f
+            val shadowTop = size.height - shadowHeight * 0.90f
 
             if (isHighlighted && canInteract) {
                 drawOval(
@@ -422,8 +400,8 @@ fun CharacterTargetZone(
                     transformOrigin = TransformOrigin(0.5f, 1.0f)
                     translationX = hoverLeanXDp.dp.toPx()
                     translationY = (idleBobDp + hoverPopYDp).dp.toPx()
-                    scaleX = idleScaleX * hoverScale * chompScale.value
-                    scaleY = idleScaleY * hoverScale * (2f - chompScale.value).coerceIn(0.82f, 1.18f)
+                    scaleX = hoverScale * chompScale.value
+                    scaleY = hoverScale * chompScale.value
                     rotationZ = idleTiltDeg
                 }
         )
@@ -458,6 +436,7 @@ fun CharacterTargetZone(
 @Composable
 fun ConveyorBeltLane(
     items: List<ActiveFoodItem>,
+    enabled: Boolean = true,
     beltScrollPhase: Float,
     compactMode: Boolean,
     dragThresholdPx: Float,
@@ -630,7 +609,8 @@ fun ConveyorBeltLane(
                             scaleX = scale
                             scaleY = scale
                         }
-                        .pointerInput(item.id) {
+                        .pointerInput(item.id, enabled) {
+                            if (!enabled) return@pointerInput
                             detectDragGestures(
                                 onDragStart = {
                                     isDraggingPlate = true

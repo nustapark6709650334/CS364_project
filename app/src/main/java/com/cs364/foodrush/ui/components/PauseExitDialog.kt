@@ -1,5 +1,7 @@
 package com.cs364.foodrush.ui.components
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -58,7 +60,7 @@ fun PauseExitDialog(
             contentPadding = PaddingValues(16.dp)
         ) {
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
@@ -119,8 +121,8 @@ fun PauseExitDialog(
                             fontWeight = FontWeight.ExtraBold,
                             fontFamily = FontFamily.Monospace,
                             color = colorScheme.onPrimary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            maxLines = 2,
+                            textAlign = TextAlign.Center
                         )
                     }
 
@@ -140,8 +142,8 @@ fun PauseExitDialog(
                             fontWeight = FontWeight.ExtraBold,
                             fontFamily = FontFamily.Monospace,
                             color = colorScheme.onErrorContainer,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            maxLines = 2,
+                            textAlign = TextAlign.Center
                         )
                     }
                 }
