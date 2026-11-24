@@ -1,0 +1,27 @@
+<resources>
+    <!-- Role 2: Gameplay UI & Pause Exit Dialog Strings (TH) -->
+    <string name="gameplay_score_label">คะแนน:</string>
+    <string name="gameplay_plus_one">+1</string>
+    <string name="gameplay_speed_up_banner">เร่งความเร็ว!</string>
+    <string name="gameplay_speed_level_format">ระดับ %1$d • %2$s</string>
+    <string name="gameplay_speed_max_format">สูงสุด • %1$s</string>
+    <string name="gameplay_pause_symbol">II</string>
+    <string name="gameplay_pause_cd">หยุดเกมชั่วคราว</string>
+
+    <string name="gameplay_target_skinny">คนผอม</string>
+    <string name="gameplay_target_skinny_food">เบอร์เกอร์</string>
+    <string name="gameplay_target_trash">ถังขยะ</string>
+    <string name="gameplay_target_trash_food">เศษอาหาร</string>
+    <string name="gameplay_target_chubby">คนอ้วน</string>
+    <string name="gameplay_target_chubby_food">สลัดผัก</string>
+    <string name="gameplay_hint_controls">ลากจานไปหาตัวละคร หรือแตะปุ่มด้านล่าง!</string>
+
+    <string name="gameplay_cd_skinny">ตัวละครคนผอมฝั่งซ้าย (อาหารพลังงานสูง)</string>
+    <string name="gameplay_cd_chubby">ตัวละครคนอ้วนฝั่งขวา (อาหารคลีน)</string>
+    <string name="gameplay_cd_trash">ถังขยะด้านล่าง (เศษอาหาร)</string>
+
+    <string name="pause_dialog_title">หยุดเกมชั่วคราว</string>
+    <string name="pause_dialog_body">คะแนน: %1$d • ความเร็ว: %2$s\nบันทึกสถานะสายพานไว้เรียบร้อยแล้ว</string>
+    <string name="pause_dialog_resume">เล่นต่อ</string>
+    <string name="pause_dialog_exit">กลับเมนูหลัก</string>
+</resources>
