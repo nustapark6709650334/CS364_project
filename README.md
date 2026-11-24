@@ -20,7 +20,7 @@
 | Role | ชื่อ-รหัสสมาชิก | ไฟล์ / หน้าจอที่รับผิดชอบ | เกณฑ์ CS364 ที่รับผิดชอบในรายงาน |
 | :--- | :--- | :--- | :--- |
 | **Role 1: Game Engine & Speed Mechanics** | `<ชื่อ + รหัส>` | `game/GameEngine.kt`, `SpeedController.kt`, `FoodItem.kt` (ระบบคิวจาน, สูตร Speed Cap, Delta Time) | ข้อ 1.4, 2.1–2.4, 5.3 |
-| **Role 2: Gameplay UI & Lifecycle Guard** | `<ชื่อ + รหัส>` | `ui/screens/GameplayScreen.kt`, `PauseExitDialog.kt`, `CharacterView.kt` (กระดานเล่น, ปุ่ม 3 ทาง, Pause/Resume) | ข้อ 4.2, 4.4 |
+| **Role 2: Gameplay UI & Lifecycle Guard** | `กิติบดิณ เฮงมงคลสกุล 6709650169 ` | `ui/screens/GameplayScreen.kt`, `PauseExitDialog.kt`, `CharacterView.kt` (กระดานเล่น, ปุ่ม 3 ทาง, Pause/Resume) | ข้อ 4.2, 4.4 |
 | **Role 3: Menu, Navigation, Haptics & Audio** | `<ชื่อ + รหัส>` | `ui/screens/MainMenuScreen.kt`, `AppNavGraph.kt`, `HapticAudioManager.kt` (หน้าแรก, เส้นทางหน้าจอ, สั่น & เสียง) | ข้อ 1.3, 4.1, 5.1 |
 | **Role 4: Game Over, Score DB & Delete Guard** | `<ชื่อ + รหัส>` | `ui/screens/GameOverScreen.kt`, `ScoreHistoryScreen.kt`, `ConfirmDeleteDialog.kt`, `ScoreRepository.kt` | ข้อ 1.1, 4.3 |
 | **Role 5: Settings, Day/Night, TH/EN & QA** | `<ชื่อ + รหัส>` | `ui/screens/SettingsScreen.kt`, `ui/theme/*`, `SettingsPreferences.kt`, `res/values*/strings.xml` + รูป/เสียงหลัก | ข้อ 1.2, 3.1–3.4, 5.2 |
