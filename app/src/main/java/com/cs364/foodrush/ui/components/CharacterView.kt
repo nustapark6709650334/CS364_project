@@ -379,23 +379,25 @@ fun CharacterTargetZone(
             ) { onSelectTarget(targetType) },
         contentAlignment = Alignment.BottomCenter
     ) {
-        // Pixel floor oval shadow directly beneath shoes / kneeling knees / collapsed body
+        // Pixel floor oval shadow aligned directly beneath shoes / kneeling knees / collapsed body
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
         ) {
             val shadowWidth = when {
                 pose == CharacterPose.DEAD -> size.width * 0.88f
-                targetType == TargetType.TRASH -> size.width * 0.72f
-                targetType == TargetType.CHUBBY -> size.width * 0.76f
-                else -> size.width * 0.70f
+                targetType == TargetType.SKINNY -> size.width * 0.48f
+                targetType == TargetType.CHUBBY -> size.width * 0.62f
+                else -> size.width * 0.72f
             }
             val shadowHeight = (size.height * 0.085f).coerceIn(10.dp.toPx(), 22.dp.toPx())
-            val shadowLeft = when (targetType) {
-                TargetType.TRASH -> (size.width - shadowWidth) * 0.36f
-                else -> (size.width - shadowWidth) * 0.5f
+            val shadowLeft = when {
+                pose == CharacterPose.DEAD -> (size.width - shadowWidth) * 0.5f
+                targetType == TargetType.SKINNY -> size.width * 0.08f
+                targetType == TargetType.CHUBBY -> size.width * 0.28f
+                else -> (size.width - shadowWidth) * 0.36f
             }
-            val shadowTop = size.height - shadowHeight * 0.85f
+            val shadowTop = size.height - shadowHeight * 0.90f
 
             if (isHighlighted && canInteract) {
                 drawOval(
