@@ -63,10 +63,12 @@ import com.cs364.foodrush.game.FoodType
 import com.cs364.foodrush.game.GameEngine
 import com.cs364.foodrush.game.GameUiState
 import com.cs364.foodrush.game.TargetType
+import com.cs364.foodrush.ui.components.CharacterPose
 import com.cs364.foodrush.ui.components.CharacterTargetZone
 import com.cs364.foodrush.ui.components.ConveyorBeltLane
 import com.cs364.foodrush.ui.components.PixelArcadeBox
 import com.cs364.foodrush.ui.components.resolveDragTarget
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlin.math.ceil
 import kotlin.math.roundToInt
@@ -111,8 +113,28 @@ fun GameplayScreen(
     var chubbyFedTick by remember { mutableIntStateOf(0) }
     var trashFedTick by remember { mutableIntStateOf(0) }
 
+    var skinnyIsYummy by remember { mutableStateOf(false) }
+    var chubbyIsYummy by remember { mutableStateOf(false) }
+    var lastWrongTarget by remember { mutableStateOf<TargetType?>(null) }
+
     val shakeOffsetX = remember { Animatable(0f) }
     var gameOverNavigated by remember { mutableStateOf(false) }
+
+    // Hold happy belly-rub pose briefly after each correct feed
+    LaunchedEffect(skinnyFedTick) {
+        if (skinnyFedTick > 0) {
+            skinnyIsYummy = true
+            delay(850L)
+            skinnyIsYummy = false
+        }
+    }
+    LaunchedEffect(chubbyFedTick) {
+        if (chubbyFedTick > 0) {
+            chubbyIsYummy = true
+            delay(850L)
+            chubbyIsYummy = false
+        }
+    }
 
     // Delta Time (dt) loop: resets lastFrameNanos whenever resumed so dt never spikes.
     LaunchedEffect(engine, uiState.isPaused, uiState.isGameOver) {
@@ -133,11 +155,13 @@ fun GameplayScreen(
         }
     }
 
-    // Sudden Death screen shake FX before navigating to GameOverScreen.
+    // Sudden Death screen shake + KO / crying reaction beat before navigating to GameOverScreen.
     LaunchedEffect(uiState.isGameOver) {
         if (uiState.isGameOver && !gameOverNavigated) {
             gameOverNavigated = true
             highlightedTarget = null
+            skinnyIsYummy = false
+            chubbyIsYummy = false
             latestGameOverFeedback()
             val shakeSequence = listOf(14f, -14f, 10f, -10f, 6f, -6f, 0f)
             for (targetX in shakeSequence) {
@@ -146,21 +170,43 @@ fun GameplayScreen(
                     animationSpec = tween(durationMillis = 52)
                 )
             }
+            delay(950L)
             latestNavigateToGameOver(
                 uiState.score,
                 uiState.failReasonTemplateResId,
                 uiState.failFoodNameResId
             )
         } else if (!uiState.isGameOver) {
+            lastWrongTarget = null
+            skinnyIsYummy = false
+            chubbyIsYummy = false
             gameOverNavigated = false
             shakeOffsetX.snapTo(0f)
         }
+    }
+
+    val (skinnyPose, chubbyPose) = if (uiState.isGameOver) {
+        when (lastWrongTarget) {
+            TargetType.SKINNY -> CharacterPose.DEAD to CharacterPose.SAD
+            TargetType.CHUBBY -> CharacterPose.SAD to CharacterPose.DEAD
+            else -> when (uiState.failFoodNameResId) {
+                R.string.food_burger -> CharacterPose.DEAD to CharacterPose.SAD
+                R.string.food_salad -> CharacterPose.SAD to CharacterPose.DEAD
+                else -> CharacterPose.SAD to CharacterPose.SAD
+            }
+        }
+    } else {
+        val sPose = if (skinnyIsYummy) CharacterPose.YUMMY else CharacterPose.IDLE
+        val cPose = if (chubbyIsYummy) CharacterPose.YUMMY else CharacterPose.IDLE
+        sPose to cPose
     }
 
     GameplayBoardContent(
         uiState = uiState,
         beltScrollPhase = beltScrollPhase,
         highlightedTarget = highlightedTarget,
+        skinnyPose = skinnyPose,
+        chubbyPose = chubbyPose,
         skinnyFedTick = skinnyFedTick,
         chubbyFedTick = chubbyFedTick,
         trashFedTick = trashFedTick,
@@ -169,12 +215,15 @@ fun GameplayScreen(
         onSubmitItem = { itemId, target ->
             val prevScore = engine.uiState.value.score
             engine.submitItemToTarget(itemId = itemId, target = target)
-            if (engine.uiState.value.score > prevScore) {
+            val afterState = engine.uiState.value
+            if (afterState.score > prevScore) {
                 when (target) {
                     TargetType.SKINNY -> skinnyFedTick++
                     TargetType.CHUBBY -> chubbyFedTick++
                     TargetType.TRASH -> trashFedTick++
                 }
+            } else if (afterState.isGameOver) {
+                lastWrongTarget = target
             }
         },
         onPauseClick = {
@@ -192,6 +241,8 @@ private fun GameplayBoardContent(
     uiState: GameUiState,
     beltScrollPhase: Float,
     highlightedTarget: TargetType?,
+    skinnyPose: CharacterPose,
+    chubbyPose: CharacterPose,
     skinnyFedTick: Int,
     chubbyFedTick: Int,
     trashFedTick: Int,
@@ -331,34 +382,64 @@ private fun GameplayBoardContent(
             val chubbyWidth = (sideSpace * 1.00f).coerceIn(92.dp, 166.dp)
             val feetBottomOffset = arenaH * 0.25f
 
-            // Left Character: Skinny standing on floor reaching right toward belt
+            val actualSkinnyW = when (skinnyPose) {
+                CharacterPose.DEAD -> (sideSpace * 1.24f).coerceIn(112.dp, 198.dp)
+                else -> skinnyWidth
+            }
+            val actualSkinnyH = when (skinnyPose) {
+                CharacterPose.DEAD -> (arenaH * 0.23f).coerceIn(92.dp, 152.dp)
+                CharacterPose.SAD -> skinnyHeight * 0.78f
+                else -> skinnyHeight
+            }
+            val skinnyStartPad = when (skinnyPose) {
+                CharacterPose.DEAD -> 4.dp
+                else -> (sideSpace - actualSkinnyW).coerceAtLeast(2.dp)
+            }
+
+            val actualChubbyW = when (chubbyPose) {
+                CharacterPose.DEAD -> (sideSpace * 1.24f).coerceIn(112.dp, 198.dp)
+                else -> chubbyWidth
+            }
+            val actualChubbyH = when (chubbyPose) {
+                CharacterPose.DEAD -> (arenaH * 0.23f).coerceIn(92.dp, 152.dp)
+                CharacterPose.SAD -> chubbyHeight * 0.80f
+                else -> chubbyHeight
+            }
+            val chubbyEndPad = when (chubbyPose) {
+                CharacterPose.DEAD -> 4.dp
+                else -> (sideSpace - actualChubbyW).coerceAtLeast(2.dp)
+            }
+
+            // Left Character: Skinny standing / belly-rub / collapsed dead / kneeling crying
             CharacterTargetZone(
                 targetType = TargetType.SKINNY,
                 isHighlighted = highlightedTarget == TargetType.SKINNY,
+                pose = skinnyPose,
                 reactionTick = skinnyFedTick,
                 onSelectTarget = { onSubmitItem(null, it) },
                 modifier = Modifier
                     .align(Alignment.BottomStart)
                     .padding(
-                        start = (sideSpace - skinnyWidth).coerceAtLeast(2.dp),
+                        start = skinnyStartPad,
                         bottom = feetBottomOffset
                     )
-                    .size(width = skinnyWidth, height = skinnyHeight)
+                    .size(width = actualSkinnyW, height = actualSkinnyH)
             )
 
-            // Right Character: Chubby standing on floor reaching left toward belt
+            // Right Character: Chubby standing / belly-rub / collapsed dead / kneeling crying
             CharacterTargetZone(
                 targetType = TargetType.CHUBBY,
                 isHighlighted = highlightedTarget == TargetType.CHUBBY,
+                pose = chubbyPose,
                 reactionTick = chubbyFedTick,
                 onSelectTarget = { onSubmitItem(null, it) },
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(
-                        end = (sideSpace - chubbyWidth).coerceAtLeast(2.dp),
+                        end = chubbyEndPad,
                         bottom = feetBottomOffset
                     )
-                    .size(width = chubbyWidth, height = chubbyHeight)
+                    .size(width = actualChubbyW, height = actualChubbyH)
             )
 
             // Bottom Center: Trash Bin aligned under the bottom exit of the belt
@@ -623,7 +704,7 @@ private fun SegmentedSpeedBar(
     }
 }
 
-@Preview(name = "Compact Day (360x640)", widthDp = 360, heightDp = 640, showBackground = true)
+@Preview(name = "Compact Day — Yummy Belly Rub (360x640)", widthDp = 360, heightDp = 640, showBackground = true)
 @Composable
 private fun GameplayCompactDayPreview() {
     MaterialTheme(colorScheme = lightColorScheme()) {
@@ -644,6 +725,8 @@ private fun GameplayCompactDayPreview() {
             ),
             beltScrollPhase = 0.30f,
             highlightedTarget = null,
+            skinnyPose = CharacterPose.YUMMY,
+            chubbyPose = CharacterPose.IDLE,
             skinnyFedTick = 0,
             chubbyFedTick = 0,
             trashFedTick = 0,
@@ -655,7 +738,39 @@ private fun GameplayCompactDayPreview() {
     }
 }
 
-@Preview(name = "Large Night (412x915)", widthDp = 412, heightDp = 915, showBackground = true)
+@Preview(name = "KO Scene — Skinny Dead & Chubby Sad (360x640)", widthDp = 360, heightDp = 640, showBackground = true)
+@Composable
+private fun GameplaySkinnyDeadChubbySadPreview() {
+    MaterialTheme(colorScheme = lightColorScheme()) {
+        val sampleItems = listOf(
+            ActiveFoodItem(id = 1L, type = FoodType.BURGER, yProgress = 0.32f),
+            ActiveFoodItem(id = 2L, type = FoodType.SALAD, yProgress = 0.68f)
+        )
+        GameplayBoardContent(
+            uiState = GameUiState(
+                score = 18,
+                speedLevel = 4,
+                speedProgress = 0.72f,
+                speedMultiplierText = "1.7x",
+                items = sampleItems,
+                isGameOver = true
+            ),
+            beltScrollPhase = 0.40f,
+            highlightedTarget = null,
+            skinnyPose = CharacterPose.DEAD,
+            chubbyPose = CharacterPose.SAD,
+            skinnyFedTick = 0,
+            chubbyFedTick = 0,
+            trashFedTick = 0,
+            shakeOffsetDp = 0f,
+            onHighlightTargetChange = {},
+            onSubmitItem = { _, _ -> },
+            onPauseClick = {}
+        )
+    }
+}
+
+@Preview(name = "KO Scene — Chubby Dead & Skinny Sad (412x915)", widthDp = 412, heightDp = 915, showBackground = true)
 @Composable
 private fun GameplayLargeNightPreview() {
     MaterialTheme(colorScheme = darkColorScheme()) {
@@ -671,10 +786,13 @@ private fun GameplayLargeNightPreview() {
                 speedProgress = 1.0f,
                 speedMultiplierText = "2.4x",
                 isAtMaxSpeed = true,
-                items = sampleItems
+                items = sampleItems,
+                isGameOver = true
             ),
             beltScrollPhase = 0.65f,
-            highlightedTarget = TargetType.CHUBBY,
+            highlightedTarget = null,
+            skinnyPose = CharacterPose.SAD,
+            chubbyPose = CharacterPose.DEAD,
             skinnyFedTick = 0,
             chubbyFedTick = 0,
             trashFedTick = 0,

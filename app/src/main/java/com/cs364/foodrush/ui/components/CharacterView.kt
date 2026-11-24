@@ -82,18 +82,34 @@ fun resolveDragTarget(dragX: Float, dragY: Float, thresholdPx: Float): TargetTyp
 }
 
 /**
+ * Reaction poses for Skinny & Chubby sprites (Issue #4):
+ * - [IDLE]: Waiting eagerly by the conveyor belt
+ * - [YUMMY]: Happy belly-rub after receiving the right food
+ * - [DEAD]: Collapsed flat on the floor with `X_X` eyes after wrong food/hazard
+ * - [SAD]: Kneeling on the floor crying `T_T` when the other character collapses
+ */
+enum class CharacterPose {
+    IDLE,
+    YUMMY,
+    DEAD,
+    SAD
+}
+
+/**
  * Renders a 16-bit pixel art sprite with [FilterQuality.None] so pixels stay razor-sharp.
  */
 @Composable
 fun PixelSpriteImage(
     @DrawableRes resId: Int,
     contentDescription: String?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    alignment: Alignment = Alignment.Center
 ) {
     val bitmap = ImageBitmap.imageResource(id = resId)
     Image(
         bitmap = bitmap,
         contentDescription = contentDescription,
+        alignment = alignment,
         contentScale = ContentScale.Fit,
         filterQuality = FilterQuality.None,
         modifier = modifier
@@ -179,15 +195,16 @@ fun PixelArcadeBox(
 
 /**
  * Full-body unboxed 16-bit character / trash bin standing directly on the checkered floor
- * with 3-layer procedural pixel animations:
- * 1) Continuous idle breathing & bobbing (or hazard rattle on Trash Bin)
+ * with 3-layer procedural pixel animations & symmetric reaction pose sprites:
+ * 1) Continuous idle breathing & bobbing (or hazard rattle on Trash Bin / crying tremble on [CharacterPose.SAD])
  * 2) Drag-hover lunge toward the conveyor belt + floor target highlight
- * 3) Chomp / gulp squash-and-stretch bounce + rising "+1" popup on correct feed
+ * 3) Chomp / gulp squash-and-stretch bounce + rising "+1" popup on [CharacterPose.YUMMY], or collapse thud on [CharacterPose.DEAD]
  */
 @Composable
 fun CharacterTargetZone(
     targetType: TargetType,
     isHighlighted: Boolean,
+    pose: CharacterPose = CharacterPose.IDLE,
     reactionTick: Int = 0,
     hasApproachingHazard: Boolean = false,
     onSelectTarget: (TargetType) -> Unit,
@@ -195,8 +212,18 @@ fun CharacterTargetZone(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val spriteRes = when (targetType) {
-        TargetType.SKINNY -> R.drawable.char_skinny
-        TargetType.CHUBBY -> R.drawable.char_chubby
+        TargetType.SKINNY -> when (pose) {
+            CharacterPose.IDLE -> R.drawable.char_skinny
+            CharacterPose.YUMMY -> R.drawable.char_skinny_yum
+            CharacterPose.DEAD -> R.drawable.char_skinny_dead
+            CharacterPose.SAD -> R.drawable.char_skinny_sad
+        }
+        TargetType.CHUBBY -> when (pose) {
+            CharacterPose.IDLE -> R.drawable.char_chubby
+            CharacterPose.YUMMY -> R.drawable.char_chubby_yum
+            CharacterPose.DEAD -> R.drawable.char_chubby_dead
+            CharacterPose.SAD -> R.drawable.char_chubby_sad
+        }
         TargetType.TRASH -> R.drawable.char_trash
     }
     val contentDescRes = when (targetType) {
@@ -205,17 +232,18 @@ fun CharacterTargetZone(
         TargetType.TRASH -> R.string.gameplay_cd_trash
     }
 
-    // Layer 1: Continuous idle breathing/bobbing & hazard rattle
+    // Layer 1: Continuous idle breathing/bobbing, hazard rattle, & sad crying tremble
     val infiniteTransition = rememberInfiniteTransition(label = "idle_$targetType")
     val idleCycle by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
             animation = tween(
-                durationMillis = when (targetType) {
-                    TargetType.SKINNY -> 620
-                    TargetType.CHUBBY -> 780
-                    TargetType.TRASH -> 680
+                durationMillis = when {
+                    pose == CharacterPose.YUMMY -> 320
+                    targetType == TargetType.SKINNY -> 620
+                    targetType == TargetType.CHUBBY -> 780
+                    else -> 680
                 },
                 easing = FastOutSlowInEasing
             ),
@@ -232,37 +260,77 @@ fun CharacterTargetZone(
         ),
         label = "hazard_rattle"
     )
+    val sadTremble by infiniteTransition.animateFloat(
+        initialValue = -1f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 155, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "sad_tremble"
+    )
 
-    val idleBobDp = when (targetType) {
-        TargetType.SKINNY -> -5f * idleCycle
-        TargetType.CHUBBY -> -4f * idleCycle
-        TargetType.TRASH -> if (hasApproachingHazard) -2.5f * abs(hazardRattle) else -1.5f * idleCycle
+    val deadDropOffsetDp = remember { Animatable(0f) }
+    LaunchedEffect(pose) {
+        if (pose == CharacterPose.DEAD) {
+            deadDropOffsetDp.snapTo(-22f)
+            deadDropOffsetDp.animateTo(0f, tween(210, easing = FastOutSlowInEasing))
+        } else {
+            deadDropOffsetDp.snapTo(0f)
+        }
     }
-    val idleScaleY = when (targetType) {
-        TargetType.SKINNY -> 0.98f + 0.045f * idleCycle
-        TargetType.CHUBBY -> 1.02f - 0.04f * idleCycle
-        TargetType.TRASH -> 0.985f + 0.03f * idleCycle
+
+    val idleBobDp = when (pose) {
+        CharacterPose.DEAD -> deadDropOffsetDp.value
+        CharacterPose.SAD -> -1.6f * abs(sadTremble)
+        CharacterPose.YUMMY -> -7f * idleCycle
+        CharacterPose.IDLE -> when (targetType) {
+            TargetType.SKINNY -> -5f * idleCycle
+            TargetType.CHUBBY -> -4f * idleCycle
+            TargetType.TRASH -> if (hasApproachingHazard) -2.5f * abs(hazardRattle) else -1.5f * idleCycle
+        }
     }
-    val idleScaleX = when (targetType) {
-        TargetType.SKINNY -> 1.02f - 0.03f * idleCycle
-        TargetType.CHUBBY -> 0.98f + 0.045f * idleCycle
-        TargetType.TRASH -> 1.015f - 0.025f * idleCycle
+    val idleScaleY = when (pose) {
+        CharacterPose.DEAD -> 1.0f
+        CharacterPose.SAD -> 0.985f + 0.025f * abs(sadTremble)
+        CharacterPose.YUMMY -> 0.97f + 0.055f * idleCycle
+        CharacterPose.IDLE -> when (targetType) {
+            TargetType.SKINNY -> 0.98f + 0.045f * idleCycle
+            TargetType.CHUBBY -> 1.02f - 0.04f * idleCycle
+            TargetType.TRASH -> 0.985f + 0.03f * idleCycle
+        }
     }
-    val idleTiltDeg = when (targetType) {
-        TargetType.SKINNY -> -1.2f + 2.4f * idleCycle
-        TargetType.CHUBBY -> -1.6f + 3.2f * idleCycle
-        TargetType.TRASH -> if (hasApproachingHazard) hazardRattle * 3.5f else 0f
+    val idleScaleX = when (pose) {
+        CharacterPose.DEAD -> 1.0f
+        CharacterPose.SAD -> 1.0f
+        CharacterPose.YUMMY -> 1.03f - 0.04f * idleCycle
+        CharacterPose.IDLE -> when (targetType) {
+            TargetType.SKINNY -> 1.02f - 0.03f * idleCycle
+            TargetType.CHUBBY -> 0.98f + 0.045f * idleCycle
+            TargetType.TRASH -> 1.015f - 0.025f * idleCycle
+        }
+    }
+    val idleTiltDeg = when (pose) {
+        CharacterPose.DEAD -> 0f
+        CharacterPose.SAD -> sadTremble * 1.4f
+        CharacterPose.YUMMY -> -2.2f + 4.4f * idleCycle
+        CharacterPose.IDLE -> when (targetType) {
+            TargetType.SKINNY -> -1.2f + 2.4f * idleCycle
+            TargetType.CHUBBY -> -1.6f + 3.2f * idleCycle
+            TargetType.TRASH -> if (hasApproachingHazard) hazardRattle * 3.5f else 0f
+        }
     }
 
     // Layer 2: Drag-hover eager lunge toward belt
+    val canInteract = pose != CharacterPose.DEAD && pose != CharacterPose.SAD
     val hoverScale by animateFloatAsState(
-        targetValue = if (isHighlighted) 1.11f else 1.0f,
+        targetValue = if (isHighlighted && canInteract) 1.11f else 1.0f,
         animationSpec = tween(durationMillis = 120),
         label = "hover_scale"
     )
     val hoverLeanXDp by animateFloatAsState(
         targetValue = when {
-            !isHighlighted -> 0f
+            !isHighlighted || !canInteract -> 0f
             targetType == TargetType.SKINNY -> 8f
             targetType == TargetType.CHUBBY -> -8f
             else -> 0f
@@ -271,7 +339,7 @@ fun CharacterTargetZone(
         label = "hover_lean_x"
     )
     val hoverPopYDp by animateFloatAsState(
-        targetValue = if (isHighlighted && targetType == TargetType.TRASH) -6f else 0f,
+        targetValue = if (isHighlighted && canInteract && targetType == TargetType.TRASH) -6f else 0f,
         animationSpec = tween(durationMillis = 120),
         label = "hover_pop_y"
     )
@@ -305,20 +373,22 @@ fun CharacterTargetZone(
     Box(
         modifier = modifier
             .clickable(
+                enabled = canInteract,
                 interactionSource = interactionSource,
                 indication = null
             ) { onSelectTarget(targetType) },
         contentAlignment = Alignment.BottomCenter
     ) {
-        // Pixel floor oval shadow directly beneath shoes / trash bin base
+        // Pixel floor oval shadow directly beneath shoes / kneeling knees / collapsed body
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
         ) {
-            val shadowWidth = when (targetType) {
-                TargetType.TRASH -> size.width * 0.72f
-                TargetType.CHUBBY -> size.width * 0.76f
-                TargetType.SKINNY -> size.width * 0.70f
+            val shadowWidth = when {
+                pose == CharacterPose.DEAD -> size.width * 0.88f
+                targetType == TargetType.TRASH -> size.width * 0.72f
+                targetType == TargetType.CHUBBY -> size.width * 0.76f
+                else -> size.width * 0.70f
             }
             val shadowHeight = (size.height * 0.085f).coerceIn(10.dp.toPx(), 22.dp.toPx())
             val shadowLeft = when (targetType) {
@@ -327,7 +397,7 @@ fun CharacterTargetZone(
             }
             val shadowTop = size.height - shadowHeight * 0.85f
 
-            if (isHighlighted) {
+            if (isHighlighted && canInteract) {
                 drawOval(
                     color = colorScheme.primary.copy(alpha = 0.50f),
                     topLeft = Offset(shadowLeft - 6.dp.toPx(), shadowTop - 3.dp.toPx()),
@@ -341,10 +411,11 @@ fun CharacterTargetZone(
             )
         }
 
-        // Animated 16-bit pixel character sprite (feet anchored at TransformOrigin(0.5f, 1f))
+        // Animated 16-bit pixel character sprite (feet/base anchored at Alignment.BottomCenter)
         PixelSpriteImage(
             resId = spriteRes,
             contentDescription = stringResource(contentDescRes),
+            alignment = Alignment.BottomCenter,
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
