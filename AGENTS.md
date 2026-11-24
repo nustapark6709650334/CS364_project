@@ -27,9 +27,9 @@
 ### Characters & Items (3 Types)
 | Target | Concept | Accepted Items (+1 Score) | Wrong Input |
 | :--- | :--- | :--- | :--- |
-| **Skinny (คนผอม)** | เพิ่มน้ำหนัก/พลังงาน | High-calorie: Burger, Pizza, Fried Chicken, Steak | Clean food or Hazard → **Game Over** |
-| **Chubby (คนอ้วน)** | คุมน้ำหนัก/รักสุขภาพ | Clean food: Salad, Broccoli, Apple, Boiled Chicken | Fast food or Hazard → **Game Over** |
-| **Trash (ถังขยะ)** | กำจัดสิ่งอันตราย | Hazards: Plastic straw, Fishbone, Spoiled food, Bomb | Any real food → **Game Over** |
+| **Skinny (คนผอม)** | เพิ่มน้ำหนัก/พลังงาน | High-calorie: **Burger (เบอร์เกอร์)** | Clean food or Hazard → **Game Over** |
+| **Chubby (คนอ้วน)** | คุมน้ำหนัก/รักสุขภาพ | Clean food: **Vegetable Salad (สลัดผัก)** | Fast food or Hazard → **Game Over** |
+| **Trash (ถังขยะ)** | กำจัดสิ่งอันตราย | Hazards: **Food Scraps (เศษอาหาร)** | Any real food → **Game Over** |
 
 ### Controls, Visual Style (16-Bit Pixel Art), Speed Cap & Haptics
 - **Visual Style & Reference Mockups (Locked — Option 1 + Style 3: 16-Bit Pixel Art Arcade):**

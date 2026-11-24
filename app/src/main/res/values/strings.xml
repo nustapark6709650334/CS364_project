@@ -1,3 +1,14 @@
 <resources>
-    <string name="app_name">My Application</string>
+    <string name="app_name">Fit &amp; Fat: Food Rush</string>
+
+    <!-- Role 1 Base Food & Fail Reason String Keys (Role 5 will expand full TH/EN strings) -->
+    <string name="food_burger">Burger</string>
+    <string name="food_salad">Vegetable Salad</string>
+    <string name="food_scraps">Food Scraps</string>
+
+    <string name="fail_fed_clean_to_skinny">Fed clean food (%1$s) to Skinny!</string>
+    <string name="fail_fed_high_cal_to_chubby">Fed high-calorie (%1$s) to Chubby!</string>
+    <string name="fail_fed_hazard_to_person">Fed hazard (%1$s) to a person!</string>
+    <string name="fail_trashed_good_food">Threw good food (%1$s) into the Trash Bin!</string>
+    <string name="fail_missed_item">Missed %1$s off the conveyor belt!</string>
 </resources>
