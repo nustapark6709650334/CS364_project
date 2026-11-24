@@ -1,39 +1,33 @@
 package com.cs364.foodrush.ui.components
 
 import androidx.annotation.DrawableRes
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -42,11 +36,12 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -54,18 +49,19 @@ import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.cs364.foodrush.R
 import com.cs364.foodrush.game.ActiveFoodItem
 import com.cs364.foodrush.game.TargetType
+import kotlinx.coroutines.launch
+import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.roundToInt
+import kotlin.math.sin
 
 /**
  * Resolves a player's drag/swipe delta vector into a [TargetType], or `null` if the
@@ -86,7 +82,7 @@ fun resolveDragTarget(dragX: Float, dragY: Float, thresholdPx: Float): TargetTyp
 }
 
 /**
- * Renders a 16-bit pixel art sprite with [FilterQuality.None] so pixels remain razor-sharp.
+ * Renders a 16-bit pixel art sprite with [FilterQuality.None] so pixels stay razor-sharp.
  */
 @Composable
 fun PixelSpriteImage(
@@ -105,14 +101,95 @@ fun PixelSpriteImage(
 }
 
 /**
- * Interactive character / trash target zone on the gameplay board.
- * Supports both visual drag-hover highlight and direct tap-to-feed accessibility.
+ * 16-bit stepped pixel-art arcade container with notched pixel corners,
+ * crisp dark outline, top-left specular bevel, and bottom shadow lip.
+ */
+@Composable
+fun PixelArcadeBox(
+    modifier: Modifier = Modifier,
+    fillColor: Color = MaterialTheme.colorScheme.inverseSurface,
+    borderColor: Color = MaterialTheme.colorScheme.onSurface,
+    highlightColor: Color = MaterialTheme.colorScheme.surface.copy(alpha = 0.28f),
+    shadowColor: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f),
+    cornerStep: Dp = 4.dp,
+    contentPadding: PaddingValues = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+    content: @Composable BoxScope.() -> Unit
+) {
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(modifier = Modifier.matchParentSize()) {
+            val s = cornerStep.toPx().coerceAtMost(size.minDimension / 4f)
+            val b = 3.dp.toPx().coerceAtMost(size.minDimension / 6f)
+            val bevel = 2.dp.toPx()
+            val lip = 3.dp.toPx()
+
+            // Outer notched pixel border
+            drawRect(
+                color = borderColor,
+                topLeft = Offset(s, 0f),
+                size = Size((size.width - 2f * s).coerceAtLeast(0f), size.height)
+            )
+            drawRect(
+                color = borderColor,
+                topLeft = Offset(0f, s),
+                size = Size(size.width, (size.height - 2f * s).coerceAtLeast(0f))
+            )
+
+            // Inner container fill
+            drawRect(
+                color = fillColor,
+                topLeft = Offset(s, b),
+                size = Size((size.width - 2f * s).coerceAtLeast(0f), (size.height - 2f * b).coerceAtLeast(0f))
+            )
+            drawRect(
+                color = fillColor,
+                topLeft = Offset(b, s),
+                size = Size((size.width - 2f * b).coerceAtLeast(0f), (size.height - 2f * s).coerceAtLeast(0f))
+            )
+
+            // Top & left highlight bevel
+            drawRect(
+                color = highlightColor,
+                topLeft = Offset(s, b),
+                size = Size((size.width - 2f * s).coerceAtLeast(0f), bevel)
+            )
+            drawRect(
+                color = highlightColor,
+                topLeft = Offset(b, s),
+                size = Size(bevel, (size.height - 2f * s).coerceAtLeast(0f))
+            )
+
+            // Bottom inner shadow lip
+            drawRect(
+                color = shadowColor,
+                topLeft = Offset(s, (size.height - b - lip).coerceAtLeast(b)),
+                size = Size((size.width - 2f * s).coerceAtLeast(0f), lip)
+            )
+        }
+
+        Box(
+            modifier = Modifier.padding(contentPadding),
+            contentAlignment = Alignment.Center,
+            content = content
+        )
+    }
+}
+
+/**
+ * Full-body unboxed 16-bit character / trash bin standing directly on the checkered floor
+ * with 3-layer procedural pixel animations:
+ * 1) Continuous idle breathing & bobbing (or hazard rattle on Trash Bin)
+ * 2) Drag-hover lunge toward the conveyor belt + floor target highlight
+ * 3) Chomp / gulp squash-and-stretch bounce + rising "+1" popup on correct feed
  */
 @Composable
 fun CharacterTargetZone(
     targetType: TargetType,
     isHighlighted: Boolean,
-    compactMode: Boolean,
+    reactionTick: Int = 0,
+    hasApproachingHazard: Boolean = false,
     onSelectTarget: (TargetType) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -122,122 +199,190 @@ fun CharacterTargetZone(
         TargetType.CHUBBY -> R.drawable.char_chubby
         TargetType.TRASH -> R.drawable.char_trash
     }
-    val titleRes = when (targetType) {
-        TargetType.SKINNY -> R.string.gameplay_target_skinny
-        TargetType.CHUBBY -> R.string.gameplay_target_chubby
-        TargetType.TRASH -> R.string.gameplay_target_trash
-    }
-    val foodHintRes = when (targetType) {
-        TargetType.SKINNY -> R.string.gameplay_target_skinny_food
-        TargetType.CHUBBY -> R.string.gameplay_target_chubby_food
-        TargetType.TRASH -> R.string.gameplay_target_trash_food
-    }
     val contentDescRes = when (targetType) {
         TargetType.SKINNY -> R.string.gameplay_cd_skinny
         TargetType.CHUBBY -> R.string.gameplay_cd_chubby
         TargetType.TRASH -> R.string.gameplay_cd_trash
     }
 
-    val containerColor = when (targetType) {
-        TargetType.SKINNY -> if (isHighlighted) colorScheme.primaryContainer else colorScheme.surface.copy(alpha = 0.88f)
-        TargetType.CHUBBY -> if (isHighlighted) colorScheme.secondaryContainer else colorScheme.surface.copy(alpha = 0.88f)
-        TargetType.TRASH -> if (isHighlighted) colorScheme.tertiaryContainer else colorScheme.surface.copy(alpha = 0.88f)
-    }
-    val accentBorderColor = when (targetType) {
-        TargetType.SKINNY -> colorScheme.primary
-        TargetType.CHUBBY -> colorScheme.secondary
-        TargetType.TRASH -> colorScheme.tertiary
-    }
-    val badgeBgColor = when (targetType) {
-        TargetType.SKINNY -> colorScheme.primaryContainer
-        TargetType.CHUBBY -> colorScheme.secondaryContainer
-        TargetType.TRASH -> colorScheme.tertiaryContainer
-    }
-    val badgeContentColor = when (targetType) {
-        TargetType.SKINNY -> colorScheme.onPrimaryContainer
-        TargetType.CHUBBY -> colorScheme.onSecondaryContainer
-        TargetType.TRASH -> colorScheme.onTertiaryContainer
-    }
-
-    val animatedScale by animateFloatAsState(
-        targetValue = if (isHighlighted) 1.07f else 1.0f,
-        animationSpec = tween(durationMillis = 120),
-        label = "target_zone_scale"
+    // Layer 1: Continuous idle breathing/bobbing & hazard rattle
+    val infiniteTransition = rememberInfiniteTransition(label = "idle_$targetType")
+    val idleCycle by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                durationMillis = when (targetType) {
+                    TargetType.SKINNY -> 620
+                    TargetType.CHUBBY -> 780
+                    TargetType.TRASH -> 680
+                },
+                easing = FastOutSlowInEasing
+            ),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "idle_cycle"
+    )
+    val hazardRattle by infiniteTransition.animateFloat(
+        initialValue = -1f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 135, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "hazard_rattle"
     )
 
-    val spriteSize = when {
-        targetType == TargetType.TRASH && compactMode -> 52.dp
-        targetType == TargetType.TRASH -> 64.dp
-        compactMode -> 72.dp
-        else -> 92.dp
+    val idleBobDp = when (targetType) {
+        TargetType.SKINNY -> -5f * idleCycle
+        TargetType.CHUBBY -> -4f * idleCycle
+        TargetType.TRASH -> if (hasApproachingHazard) -2.5f * abs(hazardRattle) else -1.5f * idleCycle
+    }
+    val idleScaleY = when (targetType) {
+        TargetType.SKINNY -> 0.98f + 0.045f * idleCycle
+        TargetType.CHUBBY -> 1.02f - 0.04f * idleCycle
+        TargetType.TRASH -> 0.985f + 0.03f * idleCycle
+    }
+    val idleScaleX = when (targetType) {
+        TargetType.SKINNY -> 1.02f - 0.03f * idleCycle
+        TargetType.CHUBBY -> 0.98f + 0.045f * idleCycle
+        TargetType.TRASH -> 1.015f - 0.025f * idleCycle
+    }
+    val idleTiltDeg = when (targetType) {
+        TargetType.SKINNY -> -1.2f + 2.4f * idleCycle
+        TargetType.CHUBBY -> -1.6f + 3.2f * idleCycle
+        TargetType.TRASH -> if (hasApproachingHazard) hazardRattle * 3.5f else 0f
     }
 
-    Surface(
-        modifier = modifier
-            .graphicsLayer {
-                scaleX = animatedScale
-                scaleY = animatedScale
+    // Layer 2: Drag-hover eager lunge toward belt
+    val hoverScale by animateFloatAsState(
+        targetValue = if (isHighlighted) 1.11f else 1.0f,
+        animationSpec = tween(durationMillis = 120),
+        label = "hover_scale"
+    )
+    val hoverLeanXDp by animateFloatAsState(
+        targetValue = when {
+            !isHighlighted -> 0f
+            targetType == TargetType.SKINNY -> 8f
+            targetType == TargetType.CHUBBY -> -8f
+            else -> 0f
+        },
+        animationSpec = tween(durationMillis = 120),
+        label = "hover_lean_x"
+    )
+    val hoverPopYDp by animateFloatAsState(
+        targetValue = if (isHighlighted && targetType == TargetType.TRASH) -6f else 0f,
+        animationSpec = tween(durationMillis = 120),
+        label = "hover_pop_y"
+    )
+
+    // Layer 3: Eat / chomp / gulp squash-and-stretch reaction + floating "+1"
+    val chompScale = remember { Animatable(1f) }
+    val plusOneAlpha = remember { Animatable(0f) }
+    val plusOneRiseDp = remember { Animatable(0f) }
+
+    LaunchedEffect(reactionTick) {
+        if (reactionTick > 0) {
+            launch {
+                chompScale.snapTo(1f)
+                chompScale.animateTo(0.84f, tween(60))
+                chompScale.animateTo(1.16f, tween(100))
+                chompScale.animateTo(1.0f, tween(110))
             }
-            .clip(RoundedCornerShape(8.dp))
-            .clickable { onSelectTarget(targetType) },
-        shape = RoundedCornerShape(8.dp),
-        color = containerColor,
-        border = BorderStroke(
-            width = if (isHighlighted) 3.dp else 2.dp,
-            color = if (isHighlighted) accentBorderColor else colorScheme.outline
-        ),
-        shadowElevation = if (isHighlighted) 6.dp else 2.dp
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(
-                    horizontal = if (compactMode) 4.dp else 6.dp,
-                    vertical = if (compactMode) 5.dp else 8.dp
-                ),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            PixelSpriteImage(
-                resId = spriteRes,
-                contentDescription = stringResource(contentDescRes),
-                modifier = Modifier.size(spriteSize)
-            )
-            Surface(
-                shape = RoundedCornerShape(4.dp),
-                color = badgeBgColor,
-                border = BorderStroke(1.dp, colorScheme.outline)
-            ) {
-                Column(
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = stringResource(titleRes),
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.ExtraBold,
-                        fontFamily = FontFamily.Monospace,
-                        color = badgeContentColor,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = stringResource(foodHintRes),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontSize = if (compactMode) 9.sp else 10.sp,
-                        color = badgeContentColor.copy(alpha = 0.85f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+            launch {
+                plusOneAlpha.snapTo(1f)
+                plusOneRiseDp.snapTo(0f)
+                launch {
+                    plusOneRiseDp.animateTo(-30f, tween(420, easing = FastOutSlowInEasing))
                 }
+                plusOneAlpha.animateTo(0f, tween(420))
+            }
+        }
+    }
+
+    val interactionSource = remember { MutableInteractionSource() }
+
+    Box(
+        modifier = modifier
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null
+            ) { onSelectTarget(targetType) },
+        contentAlignment = Alignment.BottomCenter
+    ) {
+        // Pixel floor oval shadow directly beneath shoes / trash bin base
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+        ) {
+            val shadowWidth = when (targetType) {
+                TargetType.TRASH -> size.width * 0.72f
+                TargetType.CHUBBY -> size.width * 0.76f
+                TargetType.SKINNY -> size.width * 0.70f
+            }
+            val shadowHeight = (size.height * 0.085f).coerceIn(10.dp.toPx(), 22.dp.toPx())
+            val shadowLeft = when (targetType) {
+                TargetType.TRASH -> (size.width - shadowWidth) * 0.36f
+                else -> (size.width - shadowWidth) * 0.5f
+            }
+            val shadowTop = size.height - shadowHeight * 0.85f
+
+            if (isHighlighted) {
+                drawOval(
+                    color = colorScheme.primary.copy(alpha = 0.50f),
+                    topLeft = Offset(shadowLeft - 6.dp.toPx(), shadowTop - 3.dp.toPx()),
+                    size = Size(shadowWidth + 12.dp.toPx(), shadowHeight + 6.dp.toPx())
+                )
+            }
+            drawOval(
+                color = colorScheme.onSurface.copy(alpha = 0.24f),
+                topLeft = Offset(shadowLeft, shadowTop),
+                size = Size(shadowWidth, shadowHeight)
+            )
+        }
+
+        // Animated 16-bit pixel character sprite (feet anchored at TransformOrigin(0.5f, 1f))
+        PixelSpriteImage(
+            resId = spriteRes,
+            contentDescription = stringResource(contentDescRes),
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    transformOrigin = TransformOrigin(0.5f, 1.0f)
+                    translationX = hoverLeanXDp.dp.toPx()
+                    translationY = (idleBobDp + hoverPopYDp).dp.toPx()
+                    scaleX = idleScaleX * hoverScale * chompScale.value
+                    scaleY = idleScaleY * hoverScale * (2f - chompScale.value).coerceIn(0.82f, 1.18f)
+                    rotationZ = idleTiltDeg
+                }
+        )
+
+        // Floating "+1" pixel arcade popup right above character when fed
+        if (plusOneAlpha.value > 0.01f) {
+            PixelArcadeBox(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .offset(y = plusOneRiseDp.value.dp)
+                    .graphicsLayer { alpha = plusOneAlpha.value },
+                fillColor = colorScheme.primary,
+                borderColor = colorScheme.onSurface,
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 3.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.gameplay_plus_one),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontFamily = FontFamily.Monospace,
+                    color = colorScheme.onPrimary
+                )
             }
         }
     }
 }
 
 /**
- * Vertical arcade conveyor belt displaying moving [ActiveFoodItem] plates.
- * Supports dragging individual plates or swiping across the belt lane.
+ * Full-height 3D metallic arcade conveyor belt with animated horizontal slats,
+ * side-rail rivets, and direct pixel-art food plates (no duplicate circles).
  */
 @Composable
 fun ConveyorBeltLane(
@@ -245,6 +390,7 @@ fun ConveyorBeltLane(
     beltScrollPhase: Float,
     compactMode: Boolean,
     dragThresholdPx: Float,
+    topPlateInset: Dp = 56.dp,
     onHighlightTargetChange: (TargetType?) -> Unit,
     onSubmitItem: (itemId: Long?, target: TargetType) -> Unit,
     modifier: Modifier = Modifier
@@ -255,93 +401,129 @@ fun ConveyorBeltLane(
     val latestSubmitItem by rememberUpdatedState(onSubmitItem)
 
     val frontMostItemId = remember(items) { items.maxByOrNull { it.yProgress }?.id }
-    var bgDragOffset by remember { mutableStateOf(Offset.Zero) }
 
     BoxWithConstraints(
-        modifier = modifier
-            .pointerInput(Unit) {
-                detectDragGestures(
-                    onDragStart = {
-                        bgDragOffset = Offset.Zero
-                    },
-                    onDrag = { change, dragAmount ->
-                        change.consume()
-                        bgDragOffset += dragAmount
-                        latestHighlightChange(
-                            resolveDragTarget(bgDragOffset.x, bgDragOffset.y, latestThreshold)
-                        )
-                    },
-                    onDragEnd = {
-                        val resolved = resolveDragTarget(bgDragOffset.x, bgDragOffset.y, latestThreshold)
-                        bgDragOffset = Offset.Zero
-                        latestHighlightChange(null)
-                        if (resolved != null) {
-                            latestSubmitItem(null, resolved)
-                        }
-                    },
-                    onDragCancel = {
-                        bgDragOffset = Offset.Zero
-                        latestHighlightChange(null)
-                    }
-                )
-            },
+        modifier = modifier,
         contentAlignment = Alignment.TopCenter
     ) {
-        val beltWidth = (maxWidth * 0.78f).coerceIn(84.dp, 148.dp)
-        val plateSize = if (compactMode) 56.dp else 68.dp
-        val usableTravelHeight = (maxHeight - plateSize - 8.dp).coerceAtLeast(1.dp)
+        val beltWidth = maxWidth
+        val plateSize = (beltWidth * 0.86f).coerceIn(if (compactMode) 68.dp else 82.dp, 118.dp)
+        val usableTravelHeight = (maxHeight - topPlateInset - plateSize).coerceAtLeast(1.dp)
 
-        // Inner conveyor track & animated slats (clipped inside belt bounds)
-        Surface(
-            modifier = Modifier
-                .width(beltWidth)
-                .fillMaxHeight(),
-            shape = RoundedCornerShape(6.dp),
-            color = colorScheme.surfaceVariant,
-            border = BorderStroke(3.dp, colorScheme.outline)
-        ) {
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                val railWidth = 6.dp.toPx()
-                val slatSpacing = 34.dp.toPx()
-                val slatHeight = 3.dp.toPx()
-                val phaseOffset = (beltScrollPhase % 1f) * slatSpacing
+        // 3D Metallic Pixel Conveyor Track (Canvas)
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val outerBorder = 3.dp.toPx()
+            val railWidth = 8.dp.toPx()
+            val innerGroove = 2.dp.toPx()
+            val slatSpacing = 44.dp.toPx()
+            val phaseOffset = (beltScrollPhase % 1f) * slatSpacing
 
-                // Side metallic rails
-                drawRect(
-                    color = colorScheme.outline.copy(alpha = 0.25f),
-                    topLeft = Offset.Zero,
-                    size = Size(railWidth, size.height)
-                )
-                drawRect(
-                    color = colorScheme.outline.copy(alpha = 0.25f),
-                    topLeft = Offset(size.width - railWidth, 0f),
-                    size = Size(railWidth, size.height)
-                )
+            // Outer dark pixel frame
+            drawRect(
+                color = colorScheme.onSurface,
+                topLeft = Offset.Zero,
+                size = size
+            )
 
-                // Moving horizontal conveyor slats
-                var y = -slatSpacing + phaseOffset
-                while (y < size.height) {
-                    if (y >= 0f) {
-                        drawRect(
-                            color = colorScheme.outline.copy(alpha = 0.35f),
-                            topLeft = Offset(railWidth + 2.dp.toPx(), y),
-                            size = Size((size.width - (railWidth + 2.dp.toPx()) * 2f).coerceAtLeast(0f), slatHeight)
-                        )
-                    }
-                    y += slatSpacing
+            // Left & right metallic rails
+            drawRect(
+                color = colorScheme.secondaryContainer,
+                topLeft = Offset(outerBorder, 0f),
+                size = Size(railWidth, size.height)
+            )
+            drawRect(
+                color = colorScheme.secondaryContainer,
+                topLeft = Offset(size.width - outerBorder - railWidth, 0f),
+                size = Size(railWidth, size.height)
+            )
+
+            // Specular highlight along outer edge of both rails
+            drawRect(
+                color = colorScheme.surface.copy(alpha = 0.55f),
+                topLeft = Offset(outerBorder, 0f),
+                size = Size(2.dp.toPx(), size.height)
+            )
+            drawRect(
+                color = colorScheme.surface.copy(alpha = 0.45f),
+                topLeft = Offset(size.width - outerBorder - railWidth, 0f),
+                size = Size(2.dp.toPx(), size.height)
+            )
+
+            // Inner dark rail grooves
+            val trackLeft = outerBorder + railWidth
+            val trackWidth = (size.width - 2f * trackLeft).coerceAtLeast(0f)
+            drawRect(
+                color = colorScheme.onSurface,
+                topLeft = Offset(trackLeft, 0f),
+                size = Size(innerGroove, size.height)
+            )
+            drawRect(
+                color = colorScheme.onSurface,
+                topLeft = Offset(size.width - trackLeft - innerGroove, 0f),
+                size = Size(innerGroove, size.height)
+            )
+
+            // Conveyor center belt surface
+            val beltInnerLeft = trackLeft + innerGroove
+            val beltInnerWidth = (trackWidth - 2f * innerGroove).coerceAtLeast(0f)
+            drawRect(
+                color = colorScheme.surfaceVariant,
+                topLeft = Offset(beltInnerLeft, 0f),
+                size = Size(beltInnerWidth, size.height)
+            )
+            drawRect(
+                color = colorScheme.onSurface.copy(alpha = 0.14f),
+                topLeft = Offset(beltInnerLeft, 0f),
+                size = Size(beltInnerWidth, size.height)
+            )
+
+            // Scrolling horizontal slats + side-rail bolts driven by beltScrollPhase
+            val seamDark = colorScheme.onSurface.copy(alpha = 0.48f)
+            val seamHighlight = colorScheme.surface.copy(alpha = 0.48f)
+            val rivetColor = colorScheme.onSurface.copy(alpha = 0.6f)
+            var y = -slatSpacing + phaseOffset
+            while (y < size.height) {
+                if (y >= 0f) {
+                    drawRect(
+                        color = seamDark,
+                        topLeft = Offset(beltInnerLeft, y),
+                        size = Size(beltInnerWidth, 3.dp.toPx())
+                    )
+                    drawRect(
+                        color = seamHighlight,
+                        topLeft = Offset(beltInnerLeft, y + 3.dp.toPx()),
+                        size = Size(beltInnerWidth, 2.dp.toPx())
+                    )
+                    // Scrolling rail rivets
+                    drawRect(
+                        color = rivetColor,
+                        topLeft = Offset(outerBorder + 3.dp.toPx(), y),
+                        size = Size(3.dp.toPx(), 3.dp.toPx())
+                    )
+                    drawRect(
+                        color = rivetColor,
+                        topLeft = Offset(size.width - outerBorder - railWidth + 3.dp.toPx(), y),
+                        size = Size(3.dp.toPx(), 3.dp.toPx())
+                    )
                 }
-
-                // Bottom danger line warning strip just above Trash Bin
-                val dangerHeight = 8.dp.toPx()
-                drawRect(
-                    color = colorScheme.errorContainer.copy(alpha = 0.65f),
-                    topLeft = Offset(railWidth, size.height - dangerHeight),
-                    size = Size((size.width - railWidth * 2f).coerceAtLeast(0f), dangerHeight)
-                )
+                y += slatSpacing
             }
+
+            // Bottom danger edge strip right above Trash Bin
+            val dangerHeight = 8.dp.toPx()
+            drawRect(
+                color = colorScheme.error.copy(alpha = 0.55f),
+                topLeft = Offset(beltInnerLeft, (size.height - outerBorder - dangerHeight).coerceAtLeast(0f)),
+                size = Size(beltInnerWidth, dangerHeight)
+            )
+            drawRect(
+                color = colorScheme.onSurface,
+                topLeft = Offset(0f, (size.height - outerBorder).coerceAtLeast(0f)),
+                size = Size(size.width, outerBorder)
+            )
         }
 
-        // Draggable food plates (unclipped so players can drag plates visually onto characters)
+        // Direct pixel-art food plates on the belt (unclipped so drags glide over characters!)
         items.forEach { item ->
             key(item.id) {
                 var plateDragOffset by remember(item.id) { mutableStateOf(Offset.Zero) }
@@ -356,12 +538,15 @@ fun ConveyorBeltLane(
                 }
 
                 val isFrontMost = item.id == frontMostItemId
-                val yOffset = 4.dp + usableTravelHeight * item.yProgress.coerceIn(0f, 1f)
+                val yOffset = topPlateInset + usableTravelHeight * item.yProgress.coerceIn(0f, 1f)
+                val rollerBobDp = if (isDraggingPlate) 0f else {
+                    sin((beltScrollPhase + item.yProgress * 2f) * 2.0 * PI).toFloat() * 0.9f
+                }
 
-                Surface(
+                Box(
                     modifier = Modifier
-                        .zIndex(if (isDraggingPlate) 10f else if (isFrontMost) 2f else 1f)
-                        .offset(y = yOffset)
+                        .zIndex(if (isDraggingPlate) 20f else if (isFrontMost) 2f else 1f)
+                        .offset(y = yOffset + rollerBobDp.dp)
                         .offset {
                             IntOffset(
                                 x = plateDragOffset.x.roundToInt(),
@@ -370,7 +555,7 @@ fun ConveyorBeltLane(
                         }
                         .size(plateSize)
                         .graphicsLayer {
-                            val scale = if (isDraggingPlate) 1.12f else 1.0f
+                            val scale = if (isDraggingPlate) 1.16f else 1.0f
                             scaleX = scale
                             scaleY = scale
                         }
@@ -411,156 +596,23 @@ fun ConveyorBeltLane(
                                 }
                             )
                         },
-                    shape = CircleShape,
-                    color = colorScheme.surface,
-                    border = BorderStroke(
-                        width = if (isDraggingPlate || isFrontMost) 3.dp else 2.dp,
-                        color = when {
-                            isDraggingPlate -> colorScheme.primary
-                            isFrontMost -> colorScheme.tertiary
-                            else -> colorScheme.outline
-                        }
-                    ),
-                    shadowElevation = if (isDraggingPlate) 8.dp else 3.dp
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(6.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        PixelSpriteImage(
-                            resId = item.type.spriteResId,
-                            contentDescription = stringResource(item.type.nameResId),
-                            modifier = Modifier.fillMaxSize()
+                    // Subtle dark oval drop shadow under the plate directly on the belt
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        drawOval(
+                            color = colorScheme.onSurface.copy(alpha = if (isDraggingPlate) 0.18f else 0.30f),
+                            topLeft = Offset(size.width * 0.12f, size.height * 0.62f),
+                            size = Size(size.width * 0.76f, size.height * 0.28f)
                         )
                     }
+
+                    PixelSpriteImage(
+                        resId = item.type.spriteResId,
+                        contentDescription = stringResource(item.type.nameResId),
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
-            }
-        }
-    }
-}
-
-/**
- * Three thumb-friendly 16-bit arcade action buttons at the bottom of the gameplay screen:
- * Left (Skinny), Center (Trash), Right (Chubby).
- */
-@Composable
-fun ArcadeActionBar(
-    compactMode: Boolean,
-    highlightedTarget: TargetType?,
-    onActionClick: (TargetType) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val minBtnHeight = if (compactMode) 48.dp else 56.dp
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        ArcadeTargetButton(
-            targetType = TargetType.SKINNY,
-            title = stringResource(R.string.gameplay_target_skinny),
-            subtitle = stringResource(R.string.gameplay_target_skinny_food),
-            spriteResId = R.drawable.food_burger,
-            isHighlighted = highlightedTarget == TargetType.SKINNY,
-            minHeight = minBtnHeight,
-            onClick = { onActionClick(TargetType.SKINNY) },
-            modifier = Modifier.weight(1f)
-        )
-        ArcadeTargetButton(
-            targetType = TargetType.TRASH,
-            title = stringResource(R.string.gameplay_target_trash),
-            subtitle = stringResource(R.string.gameplay_target_trash_food),
-            spriteResId = R.drawable.food_hazard,
-            isHighlighted = highlightedTarget == TargetType.TRASH,
-            minHeight = minBtnHeight,
-            onClick = { onActionClick(TargetType.TRASH) },
-            modifier = Modifier.weight(1f)
-        )
-        ArcadeTargetButton(
-            targetType = TargetType.CHUBBY,
-            title = stringResource(R.string.gameplay_target_chubby),
-            subtitle = stringResource(R.string.gameplay_target_chubby_food),
-            spriteResId = R.drawable.food_salad,
-            isHighlighted = highlightedTarget == TargetType.CHUBBY,
-            minHeight = minBtnHeight,
-            onClick = { onActionClick(TargetType.CHUBBY) },
-            modifier = Modifier.weight(1f)
-        )
-    }
-}
-
-@Composable
-private fun ArcadeTargetButton(
-    targetType: TargetType,
-    title: String,
-    subtitle: String,
-    @DrawableRes spriteResId: Int,
-    isHighlighted: Boolean,
-    minHeight: androidx.compose.ui.unit.Dp,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val colorScheme = MaterialTheme.colorScheme
-    val containerColor = when (targetType) {
-        TargetType.SKINNY -> colorScheme.primaryContainer
-        TargetType.TRASH -> colorScheme.tertiaryContainer
-        TargetType.CHUBBY -> colorScheme.secondaryContainer
-    }
-    val contentColor = when (targetType) {
-        TargetType.SKINNY -> colorScheme.onPrimaryContainer
-        TargetType.TRASH -> colorScheme.onTertiaryContainer
-        TargetType.CHUBBY -> colorScheme.onSecondaryContainer
-    }
-    val highlightColor = when (targetType) {
-        TargetType.SKINNY -> colorScheme.primary
-        TargetType.TRASH -> colorScheme.tertiary
-        TargetType.CHUBBY -> colorScheme.secondary
-    }
-
-    Button(
-        onClick = onClick,
-        modifier = modifier.heightIn(min = minHeight),
-        shape = RoundedCornerShape(6.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = containerColor,
-            contentColor = contentColor
-        ),
-        border = BorderStroke(
-            width = if (isHighlighted) 3.dp else 2.dp,
-            color = if (isHighlighted) highlightColor else colorScheme.outline
-        ),
-        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp)
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(5.dp)
-        ) {
-            PixelSpriteImage(
-                resId = spriteResId,
-                contentDescription = null,
-                modifier = Modifier.size(24.dp)
-            )
-            Column(horizontalAlignment = Alignment.Start) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.ExtraBold,
-                    fontFamily = FontFamily.Monospace,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Start
-                )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontSize = 10.sp,
-                    color = contentColor.copy(alpha = 0.85f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Start
-                )
             }
         }
     }
