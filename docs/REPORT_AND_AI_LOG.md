@@ -26,9 +26,9 @@
 
 ### ข้อ 4: Back Navigation, Delete Confirmation & Activity Lifecycle
 - [ ] **4.1** กด Back จากทุกหน้าเนื้อหาที่เข้าจากเมนูแล้วกลับหน้าก่อนหน้าตามผัง ไม่กระโดดข้ามหน้า
-- [ ] **4.2** กด Back ขณะอยู่ในหน้า Gameplay/หน้าที่จะออกจากแอป ต้องไม่หลุดทันที (มีหน้าต่างยืนยัน/กดซ้ำ และกดยกเลิกเพื่ออยู่ต่อได้)
+- [x] **4.2** กด Back ขณะอยู่ในหน้า Gameplay/หน้าที่จะออกจากแอป ต้องไม่หลุดทันที (มีหน้าต่างยืนยัน/กดซ้ำ และกดยกเลิกเพื่ออยู่ต่อได้)
 - [ ] **4.3** ทุกคำสั่งลบใน Score History มี Dialog ยืนยันก่อนลบ (ทดสอบทั้ง *ยกเลิก* → ข้อมูลอยู่ และ *ยืนยัน* → ข้อมูลหาย)
-- [ ] **4.4** สลับไปแอปอื่น (`onPause`) เกมและเสียงหยุดทันที กลับมา (`onResume`) เล่นต่อจากคะแนน/ความเร็ว/สถานะเดิมได้
+- [x] **4.4** สลับไปแอปอื่น (`onPause`) เกมและเสียงหยุดทันที กลับมา (`onResume`) เล่นต่อจากคะแนน/ความเร็ว/สถานะเดิมได้
 
 ### ข้อ 5: รายงานและการนำเสนอ
 - [ ] **5.1** ภาพหน้าแอปเรียงตามการใช้งานหลักตั้งแต่เริ่มจนจบ พร้อมระบุปุ่มที่กดและการกระทำระหว่างหน้าจอ
@@ -45,6 +45,7 @@
 | หัวข้อปัญหา (Challenge) | ฟังก์ชัน / ไฟล์ที่พบ & สาเหตุ (2.2) | วิธีแก้ในโค้ด & เหตุผล (2.3) | หลักฐาน Before / After (2.4) |
 | :--- | :--- | :--- | :--- |
 | **Role 1: จานอาหารกระโดดข้ามสายพานเมื่อค่า Delta Time (`dt`) พุ่งสูงหลังหยุดเกมชั่วคราว** | `GameEngine.kt` (`update`): เมื่อคำนวณระยะเลื่อน $\Delta y = v(s) \cdot dt$ หากเกมหยุดชั่วคราวหรือเฟรมสะดุด ค่า `rawDtSeconds` ของเฟรมถัดมาอาจพุ่งสูงหลายวินาที ทำให้ `yProgress` พุ่งเกิน `1.0f` จนแพ้ทันที | จำกัดเพดาน `val dt = rawDtSeconds.coerceIn(0f, MAX_FRAME_DT_SECONDS)` (`0.05f` วินาที) และบล็อกการอัปเดตขณะ `isPaused == true` ใน `GameEngine.update()` | **Before:** ส่ง `dt = 2.0f` หลัง Resume แล้ว `yProgress` พุ่งเกิน `1.0f` (Game Over ทันที)<br>**After:** ผลรัน Unit Test `gameEngine_pausePreservesStateAndClampsPostResumeDtSpike` ยืนยันว่าตำแหน่งขยับไม่เกิน `0.01f` และไม่เกิด Game Over |
+| **Role 2 (เมเจอร์): แตะจานพลาดเล็กน้อยหรือพับแอป (`ON_PAUSE`) แล้วเกิด Sudden Death ไม่ยุติธรรม** | `CharacterView.kt` (`resolveDragTarget`) & `GameplayScreen.kt` (`withFrameNanos` / `LifecycleEventObserver`): การแตะคลาดเคลื่อนเล็กน้อยอาจส่งอาหารผิดฝั่ง หรือเมื่อพับแอป (`ON_PAUSE`/`ON_STOP`) ลูป `withFrameNanos` ยังเดินต่อและเกิดช่วง `dt` กระโดดตอนกลับมา | เพิ่มระยะ dead-zone `thresholdPx` (`42.dp`) ใน `resolveDragTarget`, ดัก `Lifecycle.Event.ON_PAUSE`/`ON_STOP` ด้วย `DisposableEffect` + `LifecycleEventObserver` เพื่อสั่ง `pauseGame()` พร้อมเปิด `PauseExitDialog` และรีเซ็ต `lastFrameNanos = 0L` ทุกครั้งที่ `LaunchedEffect` กลับมาทำงาน | **Before:** แตะสั้นๆ บนสายพานหรือพับแอปชั่วคราวทำให้อาหารพุ่งหลุดขอบ/ป้อนผิดฝั่งจน Game Over<br>**After:** Unit Test `GameplayGestureAndLifecycleTest` ยืนยันว่า micro-drag คืน `null` และสถานะคะแนน/ความเร็ว/ตำแหน่งบนสายพานถูกเก็บรักษาครบถ้วนหลัง Pause |
 | `<ความท้าทายเพิ่มเติมของเพื่อนในทีม>` | `<ระบุฟังก์ชันและสาเหตุ>` | `<วิธีแก้และเหตุผล>` | `<ลิงก์รูปหรือผลเทส>` |
 
 ---
@@ -57,6 +58,7 @@
 | `2026-11-21` | ทีม | Antigravity | เอกสารวางแผนโครงงาน (`README.md`, `docs/*.md`) | ช่วยจัดโครงสร้างเอกสาร กฎทีม และแมปเกณฑ์ CS364 | ทีมออกแบบไอเดียเกมต้นแบบ (2 ตัวละคร, Speed Cap, Haptics) และกำหนดกติกา |
 | `2026-11-24` | ทีม | Antigravity Image Gen | ออกแบบ UI Mockup (`docs/ui/*.png`) และ 16-Bit Pixel Art Sprites (`res/drawable-nodpi/*.png`) | สร้างภาพตัวอย่าง UI หลายสไตล์และเจน Sprite ตัวละคร/อาหารตามบรีฟ | ทีมคัดเลือกโครงหน้าจอ Option 1 (ลากอาหารไปป้อนตัวละคร ซ้าย/ขวา/ถังขยะล่าง) และเลือกลายเส้น Style 3 (16-Bit Pixel Art) พร้อมตัดพื้นหลังโปร่งใส |
 | `2026-11-24` | Role 1 | Antigravity | `game/FoodItem.kt`, `game/SpeedController.kt`, `game/GameEngine.kt` (Issues #2–#3) | ช่วยขึ้นโครงคลาส `SpeedController` และ `StateFlow` ใน `GameEngine` | กำหนดไอเทม 3 ชนิด (เบอร์เกอร์, สลัดผัก, เศษอาหาร), พารามิเตอร์สูตร $v(s) = \min(v_{\max}, v_0 + k\lfloor s/5\rfloor)$, สัดส่วนขยะ 10%→25%, การล็อก `MAX_FRAME_DT_SECONDS` และชุดทดสอบ `SpeedAndEngineTest.kt` |
+| `2026-11-24` | Role 2 (เมเจอร์) | Antigravity | `ui/components/CharacterView.kt`, `ui/screens/GameplayScreen.kt`, `ui/components/PauseExitDialog.kt`, `res/values*/strings_role2.xml` (Issues #4–#5) | ช่วยขึ้นโครง Jetpack Compose layout, ท่าทางลากจาน (`detectDragGestures`), และ `LifecycleEventObserver` | ปรับการจัดวางกระดานให้ตรงภาพต้นแบบ `ui_pixel_gameplay.png` (`FilterQuality.None`, สายพานกลาง + ปุ่ม 3 ทาง), ใช้ `MaterialTheme.colorScheme` ล้วน, กำหนด dead-zone ท่าทางลาก, เชื่อม `BackHandler` + `PauseExitDialog`, และเขียน `GameplayGestureAndLifecycleTest.kt` |
 | `<YYYY-MM-DD>` | `<ชื่อ>` | `<AI>` | `<ไฟล์>` | `<ส่วนที่ AI ช่วย>` | `<ส่วนที่แก้และเขียนต่อเอง>` |
 
 *ส่วนที่พัฒนาเอง 100% โดยไม่ใช้ AI:* `<ระบุชื่อไฟล์/โมดูล และผู้พัฒนา>`

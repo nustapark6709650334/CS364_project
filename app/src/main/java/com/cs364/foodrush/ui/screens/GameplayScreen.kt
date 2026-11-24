@@ -1,5 +1,6 @@
 package com.cs364.foodrush.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -34,12 +35,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -57,6 +60,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cs364.foodrush.R
 import com.cs364.foodrush.game.GameEngine
@@ -65,6 +71,7 @@ import com.cs364.foodrush.game.TargetType
 import com.cs364.foodrush.ui.components.ArcadeActionBar
 import com.cs364.foodrush.ui.components.CharacterTargetZone
 import com.cs364.foodrush.ui.components.ConveyorBeltLane
+import com.cs364.foodrush.ui.components.PauseExitDialog
 import kotlinx.coroutines.isActive
 import kotlin.math.ceil
 import kotlin.math.roundToInt
@@ -88,11 +95,13 @@ fun GameplayScreen(
     onResumeAudio: () -> Unit = {},
     gameEngine: GameEngine? = null
 ) {
+    val latestNavigateBackToMenu by rememberUpdatedState(onNavigateBackToMenu)
     val latestNavigateToGameOver by rememberUpdatedState(onNavigateToGameOver)
     val latestCorrectFeedback by rememberUpdatedState(onCorrectMatchFeedback)
     val latestSpeedUpFeedback by rememberUpdatedState(onSpeedLevelUpFeedback)
     val latestGameOverFeedback by rememberUpdatedState(onGameOverFeedback)
     val latestPauseAudio by rememberUpdatedState(onPauseAudio)
+    val latestResumeAudio by rememberUpdatedState(onResumeAudio)
 
     val engine = remember(gameEngine) {
         gameEngine ?: GameEngine(
@@ -104,9 +113,45 @@ fun GameplayScreen(
     val uiState by engine.uiState.collectAsStateWithLifecycle()
     var highlightedTarget by remember { mutableStateOf<TargetType?>(null) }
     var beltScrollPhase by remember { mutableFloatStateOf(0f) }
+    var showPauseDialog by rememberSaveable { mutableStateOf(false) }
 
     val shakeOffsetX = remember { Animatable(0f) }
     var gameOverNavigated by remember { mutableStateOf(false) }
+
+    val triggerPause: () -> Unit = {
+        if (!engine.uiState.value.isGameOver) {
+            highlightedTarget = null
+            engine.pauseGame()
+            latestPauseAudio()
+            showPauseDialog = true
+        }
+    }
+
+    // Back Navigation Guard (Rubric 4.2): Back pauses & asks confirmation instead of dropping out
+    BackHandler(enabled = !uiState.isGameOver) {
+        triggerPause()
+    }
+
+    // Activity Lifecycle Safety (Rubric 4.4): ON_PAUSE / ON_STOP immediately pause & preserve state
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, engine) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_PAUSE,
+                Lifecycle.Event.ON_STOP -> triggerPause()
+                Lifecycle.Event.ON_RESUME -> {
+                    if (engine.uiState.value.isPaused && !engine.uiState.value.isGameOver) {
+                        showPauseDialog = true
+                    }
+                }
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     // Delta Time (dt) loop: resets lastFrameNanos whenever resumed so dt never spikes.
     LaunchedEffect(engine, uiState.isPaused, uiState.isGameOver) {
@@ -160,14 +205,34 @@ fun GameplayScreen(
         onSubmitItem = { itemId, target ->
             engine.submitItemToTarget(itemId = itemId, target = target)
         },
-        onPauseClick = {
-            if (!uiState.isGameOver) {
-                engine.pauseGame()
-                latestPauseAudio()
-            }
-        },
+        onPauseClick = triggerPause,
         modifier = modifier
     )
+
+    if ((showPauseDialog || uiState.isPaused) && !uiState.isGameOver) {
+        val speedLabel = if (uiState.isAtMaxSpeed) {
+            stringResource(R.string.gameplay_speed_max_format, uiState.speedMultiplierText)
+        } else {
+            stringResource(
+                R.string.gameplay_speed_level_format,
+                uiState.speedLevel,
+                uiState.speedMultiplierText
+            )
+        }
+        PauseExitDialog(
+            score = uiState.score,
+            speedLabel = speedLabel,
+            onResume = {
+                showPauseDialog = false
+                engine.resumeGame()
+                latestResumeAudio()
+            },
+            onConfirmExit = {
+                showPauseDialog = false
+                latestNavigateBackToMenu()
+            }
+        )
+    }
 }
 
 @Composable
