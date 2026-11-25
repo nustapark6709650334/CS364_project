@@ -1,0 +1,22 @@
+<resources>
+    <!-- Role 3: Main Menu, Navigation, Exit Guard & Role 4 Bridge Strings (EN) -->
+    <string name="menu_play_game">PLAY GAME</string>
+    <string name="menu_score_history">SCORE HISTORY</string>
+    <string name="menu_settings_how_to">SETTINGS &amp; HOW-TO</string>
+    <string name="menu_high_score_label">HIGH SCORE: %1$d</string>
+    <string name="menu_cd_mascots">Skinny, Trash Bin, and Chubby arcade mascots</string>
+    <string name="menu_sound_on">SFX: ON</string>
+    <string name="menu_sound_off">SFX: OFF</string>
+    <string name="menu_haptic_on">HAPTIC: ON</string>
+    <string name="menu_haptic_off">HAPTIC: OFF</string>
+
+    <!-- Main Menu Exit Guard Dialog (Rubric 4.1 & 4.2) -->
+    <string name="exit_app_dialog_title">EXIT GAME?</string>
+    <string name="exit_app_dialog_body">Are you sure you want to exit Fit &amp; Fat: Food Rush?</string>
+    <string name="exit_app_dialog_stay">STAY</string>
+    <string name="exit_app_dialog_confirm">EXIT</string>
+
+    <!-- Role 4 Bridge Placeholders until Role 4 merges -->
+    <string name="role4_bridge_game_over_note">Best score saved locally. Name entry and full leaderboard connect in Role 4.</string>
+    <string name="role4_bridge_history_note">Device best score is shown below. Full score history list &amp; delete guard belong to Role 4.</string>
+</resources>

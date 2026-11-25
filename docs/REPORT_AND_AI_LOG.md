@@ -10,7 +10,7 @@
 
 - [ ] **1.1** ตารางฟังก์ชันครบตามขอบเขต พร้อมระบุหน้าจอและผลลัพธ์ของแต่ละฟังก์ชัน
 - [ ] **1.2** ตารางผลทดสอบทุกฟังก์ชัน (วิธีทดสอบ / ผลที่คาดหวัง / ผลที่ได้จริง)
-- [ ] **1.3** เชื่อมโยงเนื้อหาวิชา CS364 (Layout, Activity Lifecycle, Back Navigation, Localization TH/EN, Day/Night Theme, Storage, Hardware Vibrator API)
+- [x] **1.3** เชื่อมโยงเนื้อหาวิชา CS364 (Layout, Activity Lifecycle, Back Navigation, Localization TH/EN, Day/Night Theme, Storage, Hardware Vibrator API)
 - [x] **1.4** เชื่อมโยงรายวิชาอื่น: คณิตศาสตร์/ฟิสิกส์ (ฟังก์ชัน $v(s) = \min(v_{\max}, v_0 + k \cdot \lfloor s/5 \rfloor)$ และ Delta Time `dt`) + HCI/UX (Haptic Feedback & Error Prevention)
 
 ### ข้อ 2: ความสามารถของแอปพลิเคชันและความท้าทายเชิงเทคนิค
@@ -29,16 +29,16 @@
 
 ### ข้อ 4: Back Navigation, Delete Confirmation & Activity Lifecycle
 
-- [ ] **4.1** กด Back จากทุกหน้าเนื้อหาที่เข้าจากเมนูแล้วกลับหน้าก่อนหน้าตามผัง ไม่กระโดดข้ามหน้า
+- [x] **4.1** กด Back จากทุกหน้าเนื้อหาที่เข้าจากเมนูแล้วกลับหน้าก่อนหน้าตามผัง ไม่กระโดดข้ามหน้า
 - [x] **4.2** กด Back ขณะอยู่ในหน้า Gameplay/หน้าที่จะออกจากแอป ต้องไม่หลุดทันที (มีหน้าต่างยืนยัน/กดซ้ำ และกดยกเลิกเพื่ออยู่ต่อได้)
 - [ ] **4.3** ทุกคำสั่งลบใน Score History มี Dialog ยืนยันก่อนลบ (ทดสอบทั้ง *ยกเลิก* → ข้อมูลอยู่ และ *ยืนยัน* → ข้อมูลหาย)
-- [ ] **4.4** สลับไปแอปอื่น (`onPause`) เกมและเสียงหยุดทันที กลับมา (`onResume`) เล่นต่อจากคะแนน/ความเร็ว/สถานะเดิมได้
+- [x] **4.4** สลับไปแอปอื่น (`onPause`) เกมและเสียงหยุดทันที กลับมา (`onResume`) เล่นต่อจากคะแนน/ความเร็ว/สถานะเดิมได้
 
-**Role 2 scope:** Gameplay Back protection and game-state preservation passed device tests. Item 4.4 remains open for app-wide completion until Role 3 connects and verifies actual audio. Item 4.2 is verified for Gameplay; Main Menu exit protection belongs to Role 3.
+**Role 2 & Role 3 status:** Gameplay Back/lifecycle protection (Role 2) and production `AppNavGraph` + `MainMenuScreen` exit guard + real `HapticAudioManager` (`SoundPool` + `MediaPlayer` + `VibratorManager`) pause/resume integration (Role 3) passed JVM and Android emulator tests. Item 4.3 remains open for Role 4.
 
 ### ข้อ 5: รายงานและการนำเสนอ
 
-- [ ] **5.1** ภาพหน้าแอปเรียงตามการใช้งานหลักตั้งแต่เริ่มจนจบ พร้อมระบุปุ่มที่กดและการกระทำระหว่างหน้าจอ
+- [x] **5.1** ภาพหน้าแอปเรียงตามการใช้งานหลักตั้งแต่เริ่มจนจบ พร้อมระบุปุ่มที่กดและการกระทำระหว่างหน้าจอ
 - [ ] **5.2** ระบุแหล่งที่มาของโค้ด สื่อ หรือ AI ที่ใช้ครบทุกส่วน (จดลงตารางหัวข้อ 3 ด้านล่าง)
 - [x] **5.3** นำเสนอความท้าทายจากข้อ 2 เชื่อม ปัญหา → วิธีแก้ → ผลลัพธ์ พร้อมหลักฐานประกอบ
 - [ ] **5.4** เรียบเรียงรายงานและสไลด์นำเสนอไหลลื่น ไม่วน
@@ -56,6 +56,7 @@
 | **Role 2: KO Back guard and incomplete sprite limbs (2026-11-24)** | BackHandler was disabled during the delayed KO transition; old KO/crying images had cropped or disconnected limbs | Keep BackHandler active (triggerPause ignores KO); pause audio on background even during KO and on disposal; replace four sprites with complete transparent full-body artwork | Before images: docs/ui/before_role2_sprite_repair/. After: drawable-nodpi/char_*_dead.png and char_*_sad.png. Final validation: 8 JVM tests and 2 Android device tests passed; two-size screenshots linked in Section 4 |
 | **Role 2: Happy eating hands appeared cut off (2026-11-24)** | Both yum sprites had incomplete forearms/hands | Replaced both with complete smiling belly-holding poses, preserving transparent backgrounds and original clothing | Originals: docs/ui/before_role2_sprite_repair/char_*_yum.png; replacements: drawable-nodpi/char_*_yum.png. Both sprites inspected in the Android QA fixture at two sizes; assembleDebug passed (Section 4) |
 | **Role 2: Pose scale jumps and Activity recreation resets the game (2026-11-24)** | Transparent padding differed between sprites; the engine lived only in composition; KO delay could run in background | Draw using measured opaque bounds and cached painters; reserve side lanes and scale KO by standing height; navigation-scoped GameplaySessionViewModel retains engine; frame loop requires RESUMED; KO navigation waits for RESUMED and feedback runs once | 8 JVM tests and 2 Android emulator tests passed. Screenshots: docs/ui/role2_verified/ (360x640 TH Day and 412x915 EN Night, happy/KO/pause). Recreation test asserts identical engine and paused state |
+| **Role 3: เสียงค้างเมื่อสลับแอป (`ON_PAUSE`) และการกด Back จาก Game Over ย้อนกลับเข้าหน้าเกมที่แพ้แล้ว (2026-11-25)** | `HapticAudioManager` (`SoundPool` + `MediaPlayer`) & `AppNavGraph`: หากไม่สั่งหยุด `MediaPlayer`/`SoundPool` ใน `ON_PAUSE`/`onDispose` เสียงจะเล่นต่อในพื้นหลัง และหากไม่ `popUpTo(GAMEPLAY, inclusive = true)` ตอนไป `GameOver` การกด Back จะย้อนกลับเข้าบอร์ด Gameplay ที่ KO อยู่ | เชื่อม `LifecycleEventObserver` ใน `MainActivity` และ `onPauseAudio`/`onResumeAudio`/`stopGameplaySession` ใน `AppNavGraph` สั่ง `mediaPlayer.pause()` + `soundPool.autoPause()` ทันที, สังเคราะห์ไฟล์ WAV 16-bit PCM ลง `cacheDir` เพื่อไม่พึ่งไฟล์ภายนอก, และใช้ `popUpTo(AppRoute.GAMEPLAY) { inclusive = true }` เพื่อคืนกลับ `MainMenu` เสมอ | **Before:** เสียงยังเล่นต่อเมื่อพับแอปหรือขาดไฟล์ `.wav` และ Back จาก Game Over เสี่ยงค้างหน้าแพ้<br>**After:** 18 JVM Unit Tests (`Role3MenuNavAndFeedbackTest`) และ 5 Android Emulator Tests (`Role3NavigationAndExitDeviceTest`) ผ่านทั้งหมด พร้อมภาพหลักฐานใน `docs/ui/role3_verified/` |
 | `<ความท้าทายเพิ่มเติมของเพื่อนในทีม>` | `<ระบุฟังก์ชันและสาเหตุ>` | `<วิธีแก้และเหตุผล>` | `<ลิงก์รูปหรือผลเทส>` |
 
 ---
@@ -76,6 +77,7 @@
 | 2026-11-24 | Role 2 | OpenAI Codex | `CharacterView.kt` | Reduced idle motion, hover and non-uniform scaling | Final sprites and layout inspected on Android at two sizes; see Section 4 |
 | `2026-11-25` | Role 2 | Antigravity | `GameplayScreen.kt`, `GameplaySessionViewModel.kt`, `CharacterView.kt`, `res/values*/strings_role2.xml`, `GameplayQaActivity.kt`, Role 2 unit & device tests | Implemented compact `GameplayKoRetryBanner`, `koRetryBannerPlacement` helper, TH/EN Role 2 fail-reason mappings, `handleRetry` session reset flow, `koRetryButtonResetsSessionAndAllowsSecondRound` device test, and KO floor-impact pixel dust puff in `CharacterView.kt` | User requested an in-screen Retry button after defeat and a small KO floor-impact dust/smoke puff; placed banner above characters to keep KO/crying artwork unobstructed, kept `deadDropOffsetDp` animating when disabled, and verified build + 11 JVM unit tests |
 | `2026-11-25` | Role 5 (`sumetha06`) | AI Assistant | `data/settings/SettingsPreferences.kt`, `data/settings/SettingsScreen.kt`, `ui/theme/Color.kt`, `Theme.kt`, `Type.kt`, `res/values*/strings.xml`, `SettingsAndLocalizationTest.kt` (PR #15 / Issues #10–#11) | ช่วยขึ้นโครง DataStore Preferences, ชุดสี Material 3 Day/Night และหน้าตั้งค่า | ปรับแต่ง Per-App Language (`AppCompatDelegate.setApplicationLocales`), คำแปล TH/EN ครบถ้วน และเขียน `SettingsAndLocalizationTest.kt` |
+| `2026-11-25` | Role 3 | Antigravity | `ui/screens/MainMenuScreen.kt`, `ui/navigation/AppNavGraph.kt`, `game/HapticAudioManager.kt`, `MainActivity.kt`, `res/values*/strings_role3.xml`, `Role3MenuNavAndFeedbackTest.kt`, `Role3NavigationAndExitDeviceTest.kt` | ช่วยขึ้นโครงหน้า `MainMenuScreen` สไตล์ 16-bit Pixel Art, `AppNavGraph` เชื่อม 5 หน้าจอ, ตัวสังเคราะห์คลื่นเสียง 16-bit PCM WAV (`PcmWaveSynthesizer`), และระบบสั่น `VibratorManager`/`Vibrator` | ปรับแต่งเลย์เอาต์ให้ตรงภาพ `ui_pixel_mainmenu.png`, เพิ่ม `ExitAppConfirmDialog` ป้องกันการกด Back ออกจากแอป, เชื่อม `HighScorePreferences` + Role 4 bridge screens, ผูก `GameplayScreen` callbacks + `ON_PAUSE`/`ON_STOP` lifecycle audio guard และทดสอบจริงบน Emulator `Pixel_6a` ทั้ง 2 ขนาด/2 ธีม/2 ภาษา |
 | `<YYYY-MM-DD>` | `<ชื่อ>` | `<AI>` | `<ไฟล์>` | `<ส่วนที่ AI ช่วย>` | `<ส่วนที่แก้และเขียนต่อเอง>` |
 
 *ส่วนที่พัฒนาเอง 100% โดยไม่ใช้ AI:* `<ระบุชื่อไฟล์/โมดูล และผู้พัฒนา>`
@@ -90,13 +92,15 @@
 | ภาพต้นแบบ UI 5 หน้าจอ | `ui_pixel_mainmenu.png`, `ui_pixel_gameplay.png`, `ui_pixel_subscreens.png` | สร้างด้วย AI Image Generator (`docs/ui/`) | ใช้งานในโปรเจกต์การศึกษา CS364 | ทีมเลือกเลย์เอาต์ Option 1 + ลายเส้น Style 3 (16-Bit Pixel Art) |
 | Repaired KO and crying sprites (2026-11-24; supersedes prior dead/sad versions) | char_skinny_dead.png, char_chubby_dead.png, char_skinny_sad.png, char_chubby_sad.png | Built-in OpenAI ImageGen edits using existing project sprites as references | AI-generated edits; original reference provenance above | Complete attached arms/hands/legs/shoes; transparent background; crying poses now standing; originals preserved in docs/ui/before_role2_sprite_repair/ |
 | Repaired happy eating sprites (2026-11-24; supersedes prior yum images) | char_skinny_yum.png, char_chubby_yum.png | Built-in OpenAI ImageGen; existing character references | AI-generated edits; reference provenance above | Full connected arms/wrists/hands; one hand flat on belly, happy eyes and smile; original clothing and alpha transparency retained |
-| เสียง / ฟอนต์ | `<เช่น sfx_eat.wav>` | `<Freesound / Google Fonts>` | `<CC0 / OFL>` | `<เช่น ตัดเสียงสั้นลง>` |
+| เสียง / ฟอนต์ | `sfx_match_v1.wav`, `sfx_speed_up_v1.wav`, `sfx_game_over_v1.wav`, `sfx_ui_click_v1.wav`, `bgm_arcade_loop_v1.wav` | สังเคราะห์ 16-bit Mono PCM WAV ในโค้ด (`PcmWaveSynthesizer` ใน `HapticAudioManager.kt`) | โค้ดทีม CS364 | ออกแบบโน้ต 16-bit Chiptune SFX 4 แบบ + ลูปดนตรีประกอบ Gameplay พร้อม envelope ลดเสียงคลิก |
 
 ### 3.3 ไลบรารีและโค้ดอ้างอิงภายนอก (Libraries & References)
 
 | ชื่อไลบรารี / เอกสารอ้างอิง | URL / เวอร์ชัน | ใช้ในส่วนใด | ส่วนที่ทีมเขียนต่อยอดเอง |
 | :--- | :--- | :--- | :--- |
-| `<เช่น VibratorManager / Room / SharedPrefs>` | `<URL>` | `<ระบบสั่น / เก็บสถิติ>` | `<สร้าง Pattern 3 ระดับ / Schema & Confirm Delete>` |
+| Android `VibratorManager` / `Vibrator` & `VibrationEffect` | Android SDK 35–37 (`minSdk 26`, API 31+ `VibratorManager`) | `game/HapticAudioManager.kt` | สร้าง Pattern 3 ระดับ (Light 20ms, Double Pulse `[0,40,60,40]`, Heavy 400ms) พร้อมเช็ก `hasAmplitudeControl()` |
+| Android `SoundPool` & `MediaPlayer` | Android Media API | `game/HapticAudioManager.kt` | เชื่อม `UserSettings.isSoundEnabled` และหยุดเสียงทันทีเมื่อ `ON_PAUSE`/`ON_STOP` |
+| Jetpack Navigation Compose & DataStore Preferences | `navigation-compose:2.9.3`, `datastore-preferences:1.1.7` | `ui/navigation/AppNavGraph.kt` | วางผัง 5 หน้าจอ, Back Guard, และเก็บสถิติ High Score ชั่วคราวเชื่อมต่อ Role 4 |
 
 ### 3.4 ImageGen prompts (used for the six replacement sprites)
 
@@ -135,3 +139,23 @@ Debug-only manual QA entry point (excluded from release):
 For a static visual fixture, add `--es pose yum` (or `skinny_ko`, `chubby_ko`, `sad`, `pause`, `skinny_ko_retry`, `chubby_ko_retry`), `--es lang th` / `en`, and optionally `--ez night true`. Static fixtures are for layout inspection; the no-extra activity runs the real GameplayScreen. Navigation callbacks are counted by the harness for tests rather than connected to other roles' screens.
 
 Quality gate for this Role 2 patch: build/run, scoped TH/EN, scoped Day/Night, two screen sizes, Back/lifecycle tests and AI log completed. App-wide checklist items for other screens remain unchanged; actual audio integration and score deletion belong to their respective roles.
+
+---
+
+## 5. Role 3 implementation / QA — 2026-11-25
+
+| Check | Result / scope |
+| :--- | :--- |
+| Build & Install | `:app:assembleDebug` and `:app:installDebug` passed on Android 15 / `Pixel_6a` emulator |
+| JVM tests | 18 passed (0 failed, 0 skipped): includes 4 new tests in `Role3MenuNavAndFeedbackTest` (Haptic pattern timings, 16-bit PCM WAV header/payload validation, route builder & sanitizer, MainMenu responsive layout metrics) |
+| Device tests | 5 passed (0 failed, 0 skipped) on `Pixel_6a(AVD) - 15`: includes `Role3NavigationAndExitDeviceTest` verifying `MainMenu -> Settings -> Back -> MainMenu`, `MainMenu -> ScoreHistory -> Back -> MainMenu`, `MainMenu -> Back -> ExitAppConfirmDialog -> STAY`, and `MainMenu -> Gameplay -> Back -> PauseExitDialog -> MainMenu`, plus all 3 `GameplayLifecycleDeviceTest` cases |
+| TH/EN & Day/Night | Visually verified `MainMenuScreen` at `412×915 dp / EN / Day` and `360×640 dp / TH / Night` (no clipped text or overlap) |
+| Integration boundary | Role 4 (`GameOverScreen`, `ScoreHistoryScreen`, `ConfirmDeleteDialog`, `ScoreRepository`) uses bridge screens in `AppNavGraph.kt` with `HighScorePreferences` persistence until Role 4 PR merges |
+
+Evidence screenshots ([docs/ui/role3_verified/](ui/role3_verified/)):
+
+| Screen / State | File |
+| :--- | :--- |
+| Main Menu (412×915 dp / EN / Day) | [View](ui/role3_verified/mainmenu_412_day_en.png) |
+| Exit Confirm Dialog (412×915 dp / EN / Day) | [View](ui/role3_verified/mainmenu_412_exit_dialog.png) |
+| Main Menu (360×640 dp / TH / Night) | [View](ui/role3_verified/mainmenu_360_night_th.png) |

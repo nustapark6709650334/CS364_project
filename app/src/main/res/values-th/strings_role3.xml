@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Role 3: Main Menu, Navigation, Exit Guard & Role 4 Bridge Strings (TH) -->
+    <string name="menu_play_game">เริ่มเล่นเกม</string>
+    <string name="menu_score_history">ประวัติคะแนน</string>
+    <string name="menu_settings_how_to">ตั้งค่าและวิธีเล่น</string>
+    <string name="menu_high_score_label">สถิติสูงสุด: %1$d</string>
+    <string name="menu_cd_mascots">ตัวละครคนผอม ถังขยะ และคนอ้วน</string>
+    <string name="menu_sound_on">เสียง: เปิด</string>
+    <string name="menu_sound_off">เสียง: ปิด</string>
+    <string name="menu_haptic_on">สั่น: เปิด</string>
+    <string name="menu_haptic_off">สั่น: ปิด</string>
+
+    <!-- Main Menu Exit Guard Dialog (Rubric 4.1 & 4.2) -->
+    <string name="exit_app_dialog_title">ออกจากเกม?</string>
+    <string name="exit_app_dialog_body">ต้องการออกจากเกม Fit &amp; Fat: Food Rush ใช่หรือไม่?</string>
+    <string name="exit_app_dialog_stay">อยู่ต่อ</string>
+    <string name="exit_app_dialog_confirm">ออก</string>
+
+    <!-- Role 4 Bridge Placeholders until Role 4 merges -->
+    <string name="role4_bridge_game_over_note">บันทึกสถิติสูงสุดไว้แล้ว ระบบกรอกชื่อและตารางคะแนนเต็มจะเชื่อมต่อใน Role 4</string>
+    <string name="role4_bridge_history_note">แสดงสถิติสูงสุดบนเครื่อง (รายการคะแนนทั้งหมดและหน้าต่างยืนยันการลบอยู่ใน Role 4)</string>
+</resources>
