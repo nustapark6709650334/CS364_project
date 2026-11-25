@@ -22,10 +22,10 @@
 
 ### ข้อ 3: รองรับอุปกรณ์พกพาที่หลากหลาย
 
-- [ ] **3.1** ทดสอบ ≥2 ขนาด/ความละเอียดหน้าจอ (เช่น จอเล็ก 5" กับจอใหญ่ 6.7"/Tablet) ข้อความ/ปุ่มไม่ตัดและไม่ซ้อน
+- [x] **3.1** ทดสอบ ≥2 ขนาด/ความละเอียดหน้าจอ (เช่น จอเล็ก 5" กับจอใหญ่ 6.7"/Tablet) ข้อความ/ปุ่มไม่ตัดและไม่ซ้อน
 - [x] **3.2** ทดสอบแนวตั้งและแนวนอน (หรือระบุการตรึงแนวหน้าจอเดียวใน Manifest/Config พร้อมเหตุผล)
-- [ ] **3.3** รองรับทั้ง **ไทย (TH)** และ **อังกฤษ (EN)** เปลี่ยนครบทั้งเมนู ปุ่ม และ Dialog แจ้งเตือน
-- [ ] **3.4** รองรับทั้ง **Day Theme** และ **Night Theme** อ่านข้อความและแยกปุ่มจากพื้นหลังชัดเจน
+- [x] **3.3** รองรับทั้ง **ไทย (TH)** และ **อังกฤษ (EN)** เปลี่ยนครบทั้งเมนู ปุ่ม และ Dialog แจ้งเตือน
+- [x] **3.4** รองรับทั้ง **Day Theme** และ **Night Theme** อ่านข้อความและแยกปุ่มจากพื้นหลังชัดเจน
 
 ### ข้อ 4: Back Navigation, Delete Confirmation & Activity Lifecycle
 
@@ -75,6 +75,7 @@
 | 2026-11-24 | Role 2 | OpenAI Codex | GameplayScreen.kt, CharacterView.kt, PauseExitDialog.kt, GameplaySessionViewModel.kt, SpriteContentBounds.kt, debug QA harness and tests | Implemented layout normalization, painter cache, ViewModel retention, lifecycle gates, adaptive dialog and regression tests | User requested reasonable proportions and remaining Role 2 fixes; validated on Android emulator with original gameplay rules and Role 3 integration boundary preserved |
 | 2026-11-24 | Role 2 | OpenAI Codex | `CharacterView.kt` | Reduced idle motion, hover and non-uniform scaling | Final sprites and layout inspected on Android at two sizes; see Section 4 |
 | `2026-11-25` | Role 2 | Antigravity | `GameplayScreen.kt`, `GameplaySessionViewModel.kt`, `CharacterView.kt`, `res/values*/strings_role2.xml`, `GameplayQaActivity.kt`, Role 2 unit & device tests | Implemented compact `GameplayKoRetryBanner`, `koRetryBannerPlacement` helper, TH/EN Role 2 fail-reason mappings, `handleRetry` session reset flow, `koRetryButtonResetsSessionAndAllowsSecondRound` device test, and KO floor-impact pixel dust puff in `CharacterView.kt` | User requested an in-screen Retry button after defeat and a small KO floor-impact dust/smoke puff; placed banner above characters to keep KO/crying artwork unobstructed, kept `deadDropOffsetDp` animating when disabled, and verified build + 11 JVM unit tests |
+| `2026-11-25` | Role 5 (`sumetha06`) | AI Assistant | `data/settings/SettingsPreferences.kt`, `data/settings/SettingsScreen.kt`, `ui/theme/Color.kt`, `Theme.kt`, `Type.kt`, `res/values*/strings.xml`, `SettingsAndLocalizationTest.kt` (PR #15 / Issues #10–#11) | ช่วยขึ้นโครง DataStore Preferences, ชุดสี Material 3 Day/Night และหน้าตั้งค่า | ปรับแต่ง Per-App Language (`AppCompatDelegate.setApplicationLocales`), คำแปล TH/EN ครบถ้วน และเขียน `SettingsAndLocalizationTest.kt` |
 | `<YYYY-MM-DD>` | `<ชื่อ>` | `<AI>` | `<ไฟล์>` | `<ส่วนที่ AI ช่วย>` | `<ส่วนที่แก้และเขียนต่อเอง>` |
 
 *ส่วนที่พัฒนาเอง 100% โดยไม่ใช้ AI:* `<ระบุชื่อไฟล์/โมดูล และผู้พัฒนา>`
