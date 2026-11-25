@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Fit &amp; Fat: Food Rush</string>
+
+    <!-- Role 1 Base Food & Fail Reason String Keys -->
+    <string name="food_burger">เบอร์เกอร์</string>
+    <string name="food_salad">สลัดผัก</string>
+    <string name="food_scraps">เศษอาหาร</string>
+
+    <string name="fail_fed_clean_to_skinny">ป้อนอาหารคลีน (%1$s) ให้คนผอม!</string>
+    <string name="fail_fed_high_cal_to_chubby">ป้อนอาหารแคลอรีสูง (%1$s) ให้คนอ้วน!</string>
+    <string name="fail_fed_hazard_to_person">ป้อนของเสียอันตราย (%1$s) ให้คนกิน!</string>
+    <string name="fail_trashed_good_food">ทิ้งอาหารดี (%1$s) ลงถังขยะ!</string>
+    <string name="fail_missed_item">ปล่อยให้ %1$s ตกสายพาน!</string>
+
+    <!-- Common & Navigation -->
+    <string name="cd_navigate_back">ย้อนกลับ</string>
+    <string name="btn_back">ย้อนกลับ</string>
+    <string name="btn_close">ปิด</string>
+
+    <!-- Home & Menu (Role 3 Support) -->
+    <string name="subtitle_tagline">จัดเสิร์ฟให้ถูกคน ก่อนสายพานจะพุ่งสุดสปีด!</string>
+    <string name="menu_play">เริ่มเล่น</string>
+    <string name="menu_leaderboard">ตารางอันดับ</string>
+    <string name="menu_settings">ตั้งค่า</string>
+
+    <!-- Gameplay HUD, Game Over & Leaderboard (Role 2 & 4 Support) -->
+    <string name="hud_score">คะแนน: %1$d</string>
+    <string name="hud_speed_level">สปีด Lv.%1$d</string>
+    <string name="hud_max_speed">ความเร็วสูงสุด!</string>
+    <string name="game_paused">หยุดเกมชั่วคราว</string>
+    <string name="btn_resume">เล่นต่อ</string>
+    <string name="btn_restart">เล่นอีกครั้ง</string>
+    <string name="btn_home">หน้าหลัก</string>
+    <string name="game_over_title">จบเกม!</string>
+    <string name="game_over_score">คะแนนที่ได้: %1$d</string>
+    <string name="game_over_best_score">สถิติสูงสุด: %1$d</string>
+    <string name="leaderboard_title">ตารางคะแนนสูงสุด</string>
+    <string name="leaderboard_empty">ยังไม่มีสถิติคะแนน รีบไปเล่นเลย!</string>
+
+    <!-- Role 5 Settings & How to Play -->
+    <string name="settings_title">ตั้งค่าและวิธีเล่น</string>
+    <string name="settings_section_appearance">การแสดงผล (Day / Night)</string>
+    <string name="settings_theme_label">เลือกโหมดสีหน้าจอ</string>
+    <string name="settings_theme_system">ตามระบบ</string>
+    <string name="settings_theme_light">โหมดสว่าง</string>
+    <string name="settings_theme_dark">โหมดมืด</string>
+
+    <string name="settings_section_language">ภาษา (TH / EN)</string>
+    <string name="settings_language_label">เลือกภาษาในแอป</string>
+    <string name="settings_language_system">ตามระบบ</string>
+    <string name="settings_language_th">ไทย</string>
+    <string name="settings_language_en">English</string>
+
+    <string name="settings_section_gameplay">การตอบสนองระหว่างเล่น</string>
+    <string name="settings_sound_title">เสียงเอฟเฟกต์ (SFX)</string>
+    <string name="settings_sound_desc">เปิดเสียงประกอบเมื่อป้อนอาหารสำเร็จหรือพลาด</string>
+    <string name="settings_haptic_title">ระบบสั่น (Haptic)</string>
+    <string name="settings_haptic_desc">สั่นเตือนเมื่อปัดอาหารลงเป้าหมายหรือจบเกม</string>
+
+    <string name="settings_section_how_to_play">กติกาและวิธีเล่น</string>
+    <string name="how_to_play_intro">ปัดอาหารบนสายพานไปให้ถูกเป้าหมายตามประเภท:</string>
+    <string name="how_to_play_skinny_title">คนผอม → เบอร์เกอร์ (แคลอรีสูง)</string>
+    <string name="how_to_play_skinny_desc">ต้องการพลังงาน! ป้อนอาหารแคลอรีสูงเท่านั้น</string>
+    <string name="how_to_play_chubby_title">คนอ้วน → สลัดผัก (อาหารคลีน)</string>
+    <string name="how_to_play_chubby_desc">กำลังควบคุมอาหาร! ป้อนอาหารคลีนสุขภาพดี</string>
+    <string name="how_to_play_trash_title">ถังขยะ → เศษอาหาร (ของเสีย)</string>
+    <string name="how_to_play_trash_desc">ปัดของเสียลงถังขยะ ห้ามป้อนให้คนเด็ดขาด</string>
+    <string name="how_to_play_rule_sudden_death">กติกา Sudden Death: ป้อนผิดคน ทิ้งอาหารดี หรือปล่อยตกสายพาน จะแพ้ทันที!</string>
+    <string name="how_to_play_rule_speed">สายพานจะเร็วขึ้นทุกๆ 5 คะแนน จนถึงความเร็วสูงสุด</string>
+
+    <string name="settings_reset_default">คืนค่าเริ่มต้นทั้งหมด</string>
+    <string name="settings_about_footer">CS364 • Fit &amp; Fat: Food Rush v1.0</string>
+</resources>
