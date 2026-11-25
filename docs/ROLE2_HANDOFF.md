@@ -2,7 +2,7 @@
 
 ## Summary
 
-Implements the gameplay board, drag/swipe/tap targets, corrected happy/crying/KO sprites, pause/exit dialog and lifecycle protection. Sprite content bounds keep pose sizes stable; cached painters avoid repeatedly decoding images. GameplaySessionViewModel preserves the engine across Activity recreation.
+Implements the gameplay board, drag/swipe/tap targets, corrected happy/crying/KO sprites, pause/exit dialog, compact post-KO Retry banner (`GameplayKoRetryBanner`) and lifecycle protection. Sprite content bounds keep pose sizes stable; cached painters avoid repeatedly decoding images. GameplaySessionViewModel preserves the engine across Activity recreation.
 
 **Type:** `fix` / `ui`
 
@@ -28,13 +28,13 @@ Run from the repository root with Android SDK/JDK configured:
 adb shell am start -n com.cs364.foodrush/.ui.screens.GameplayQaActivity
 ```
 
-The connected tests require a running emulator/device. Recorded result: 8 JVM tests and 2 Android tests passed on Android 15 / Pixel_6a.
+The connected tests require a running emulator/device. Recorded result: 11 JVM tests and 3 Android tests passed on Android 15 / Pixel_6a.
 
-The debug activity runs GameplayScreen; navigation callbacks are counted for tests rather than opening other screens. It is not part of release builds. For visual fixtures, add `--es pose yum` (or `skinny_ko`, `chubby_ko`, `sad`, `pause`), `--es lang th`/`en`, and optionally `--ez night true`.
+The debug activity runs GameplayScreen; navigation callbacks are counted for tests rather than opening other screens. It is not part of release builds. For visual fixtures, add `--es pose yum` (or `skinny_ko`, `chubby_ko`, `sad`, `pause`, `skinny_ko_retry`, `chubby_ko_retry`), `--es lang th`/`en`, and optionally `--ez night true`.
 
 ## Integration contract
 
-- Role 3: call GameplayScreen inside the gameplay navigation entry. Connect `onNavigateBackToMenu`, `onNavigateToGameOver`, feedback and audio callbacks. Each new game should use a fresh navigation entry/engine. The default ViewModel uses the nearest ViewModelStoreOwner; outside Navigation it uses the Activity owner.
+- Role 3: call GameplayScreen inside the gameplay navigation entry. Connect `onNavigateBackToMenu`, `onNavigateToGameOver`, feedback, audio, and optional `onRetryGame` callbacks. Each new game should use a fresh navigation entry/engine. `GameplayScreen` keeps `onNavigateToGameOver` unchanged and delays `showRetryOnGameOver` (`true` by default) by 180 ms after calling `onNavigateToGameOver` so standalone QA/previews can tap **RETRY / เริ่มใหม่** to reset immediately; pass `showRetryOnGameOver = false` if production navigation wants to suppress the fallback banner during route transitions. The default ViewModel uses the nearest ViewModelStoreOwner; outside Navigation it uses the Activity owner.
 - If injecting `gameEngine`, its owner controls session retention/reset and its match/level callbacks. The default screen-created session wires those callbacks automatically.
 - Role 4: Game Over callback supplies score plus failure-template and food-name resource IDs.
 - Role 5: Role 2 strings are in `values/strings_role2.xml` and `values-th/strings_role2.xml`; UI uses MaterialTheme colors. App-wide locale/theme switching still needs integration.
@@ -46,4 +46,4 @@ The debug activity runs GameplayScreen; navigation callbacks are counted for tes
 - [Final screenshots](ui/role2_verified/)
 - [Original sprites for comparison](ui/before_role2_sprite_repair/)
 
-Screenshots cover TH/Day at 360×640 dp and EN/Night at 412×915 dp. They are static rendering fixtures; the separate Android tests exercise the live screen lifecycle. Actual audio output and destination screens are not verified by the debug harness.
+Screenshots cover TH/Day at 360×640 dp and EN/Night at 412×915 dp (including `360_day_th_skinny_ko_retry.png` and `412_night_en_chubby_ko_retry.png` for the KO Retry Banner). They are static rendering fixtures; the separate Android tests exercise the live screen lifecycle and post-KO Retry reset flow. Actual audio output and destination screens are not verified by the debug harness.

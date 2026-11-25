@@ -1,6 +1,7 @@
 package com.cs364.foodrush.ui.screens
 
 import androidx.activity.compose.BackHandler
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -23,11 +24,15 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
@@ -56,6 +61,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -84,6 +90,24 @@ import kotlinx.coroutines.isActive
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
+@StringRes
+internal fun resolveRole2FoodNameResId(@StringRes foodNameResId: Int): Int = when (foodNameResId) {
+    R.string.food_burger -> R.string.gameplay_target_skinny_food
+    R.string.food_salad -> R.string.gameplay_target_chubby_food
+    R.string.food_scraps -> R.string.gameplay_target_trash_food
+    else -> foodNameResId
+}
+
+@StringRes
+internal fun resolveRole2FailReasonResId(@StringRes failTemplateResId: Int): Int = when (failTemplateResId) {
+    R.string.fail_fed_clean_to_skinny -> R.string.gameplay_ko_fail_clean_to_skinny
+    R.string.fail_fed_high_cal_to_chubby -> R.string.gameplay_ko_fail_high_cal_to_chubby
+    R.string.fail_fed_hazard_to_person -> R.string.gameplay_ko_fail_hazard_to_person
+    R.string.fail_trashed_good_food -> R.string.gameplay_ko_fail_trashed_good_food
+    R.string.fail_missed_item -> R.string.gameplay_ko_fail_missed_item
+    else -> failTemplateResId
+}
+
 /**
  * Role 2: Main 16-Bit Pixel Art Arcade Gameplay Screen (Issue #4).
  *
@@ -101,7 +125,9 @@ fun GameplayScreen(
     onGameOverFeedback: () -> Unit = {},
     onPauseAudio: () -> Unit = {},
     onResumeAudio: () -> Unit = {},
-    gameEngine: GameEngine? = null
+    gameEngine: GameEngine? = null,
+    onRetryGame: () -> Unit = {},
+    showRetryOnGameOver: Boolean = true
 ) {
     val latestNavigateBackToMenu by rememberUpdatedState(onNavigateBackToMenu)
     val latestNavigateToGameOver by rememberUpdatedState(onNavigateToGameOver)
@@ -110,6 +136,7 @@ fun GameplayScreen(
     val latestGameOverFeedback by rememberUpdatedState(onGameOverFeedback)
     val latestPauseAudio by rememberUpdatedState(onPauseAudio)
     val latestResumeAudio by rememberUpdatedState(onResumeAudio)
+    val latestRetryGame by rememberUpdatedState(onRetryGame)
 
     // The navigation entry owns this model, so Activity recreation keeps the same engine.
     val session: GameplaySessionViewModel = viewModel()
@@ -139,6 +166,7 @@ fun GameplayScreen(
     val shakeOffsetX = remember { Animatable(0f) }
     var gameOverNavigated by rememberSaveable { mutableStateOf(false) }
     var gameOverFeedbackPlayed by rememberSaveable { mutableStateOf(false) }
+    var showKoRetryOverlay by rememberSaveable { mutableStateOf(false) }
 
     val triggerPause: () -> Unit = {
         if (!engine.uiState.value.isGameOver) {
@@ -157,6 +185,28 @@ fun GameplayScreen(
     // Activity Lifecycle Safety (Rubric 4.4): ON_PAUSE / ON_STOP immediately pause & preserve state
     val lifecycleOwner = LocalLifecycleOwner.current
     val lifecycleState by lifecycleOwner.lifecycle.currentStateFlow.collectAsStateWithLifecycle()
+
+    val handleRetry: () -> Unit = {
+        if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) &&
+            engine.uiState.value.isGameOver
+        ) {
+            highlightedTarget = null
+            beltScrollPhase = 0f
+            showPauseDialog = false
+            skinnyFedTick = 0
+            chubbyFedTick = 0
+            trashFedTick = 0
+            skinnyIsYummy = false
+            chubbyIsYummy = false
+            lastWrongTarget = null
+            gameOverNavigated = false
+            gameOverFeedbackPlayed = false
+            showKoRetryOverlay = false
+            engine.resetGame()
+            latestRetryGame()
+            latestResumeAudio()
+        }
+    }
     DisposableEffect(lifecycleOwner, engine) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
@@ -216,8 +266,8 @@ fun GameplayScreen(
     }
 
     // Sudden Death screen shake + KO / crying reaction beat before navigating to GameOverScreen.
-    LaunchedEffect(engine, uiState.isGameOver) {
-        if (uiState.isGameOver && !gameOverNavigated) {
+    LaunchedEffect(engine, uiState.isGameOver, showRetryOnGameOver) {
+        if (uiState.isGameOver) {
             highlightedTarget = null
             skinnyIsYummy = false
             chubbyIsYummy = false
@@ -232,20 +282,26 @@ fun GameplayScreen(
                         shakeOffsetX.animateTo(targetX, tween(durationMillis = 52))
                     }
                     delay(950L)
+                    val finalState = engine.uiState.value
                     gameOverNavigated = true
                     latestNavigateToGameOver(
-                        uiState.score,
-                        uiState.failReasonTemplateResId,
-                        uiState.failFoodNameResId
+                        finalState.score,
+                        finalState.failReasonTemplateResId,
+                        finalState.failFoodNameResId
                     )
                 }
+                if (showRetryOnGameOver && !showKoRetryOverlay) {
+                    delay(180L)
+                    showKoRetryOverlay = true
+                }
             }
-        } else if (!uiState.isGameOver) {
+        } else {
             lastWrongTarget = null
             skinnyIsYummy = false
             chubbyIsYummy = false
             gameOverNavigated = false
             gameOverFeedbackPlayed = false
+            showKoRetryOverlay = false
             shakeOffsetX.snapTo(0f)
         }
     }
@@ -294,6 +350,8 @@ fun GameplayScreen(
             }
         },
         onPauseClick = triggerPause,
+        showKoRetryBanner = showRetryOnGameOver && showKoRetryOverlay,
+        onRetryClick = handleRetry,
         modifier = modifier
     )
 
@@ -338,6 +396,8 @@ internal fun GameplayBoardContent(
     onHighlightTargetChange: (TargetType?) -> Unit,
     onSubmitItem: (itemId: Long?, target: TargetType) -> Unit,
     onPauseClick: () -> Unit,
+    showKoRetryBanner: Boolean = false,
+    onRetryClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -575,6 +635,144 @@ internal fun GameplayBoardContent(
                     .fillMaxWidth()
                     .padding(horizontal = if (compactMode) 8.dp else 12.dp, vertical = 8.dp)
             )
+
+            val koBannerPlacement = koRetryBannerPlacement(
+                arenaWidth = arenaW.value,
+                arenaHeight = arenaH.value,
+                hudTopInset = hudTopInset.value,
+                layout = layout
+            )
+            AnimatedVisibility(
+                visible = uiState.isGameOver && showKoRetryBanner,
+                enter = fadeIn(tween(220)) + scaleIn(initialScale = 0.92f, animationSpec = tween(220)),
+                exit = fadeOut(tween(150)) + scaleOut(targetScale = 0.95f, animationSpec = tween(150)),
+                modifier = Modifier
+                    .zIndex(7f)
+                    .align(Alignment.TopCenter)
+                    .padding(top = koBannerPlacement.topInset.dp, start = 14.dp, end = 14.dp)
+                    .widthIn(max = koBannerPlacement.maxWidth.dp)
+            ) {
+                GameplayKoRetryBanner(
+                    score = uiState.score,
+                    failReasonTemplateResId = uiState.failReasonTemplateResId,
+                    failFoodNameResId = uiState.failFoodNameResId,
+                    compactMode = compactMode,
+                    onRetryClick = onRetryClick,
+                    modifier = Modifier.heightIn(max = koBannerPlacement.maxHeight.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun GameplayKoRetryBanner(
+    score: Int,
+    @StringRes failReasonTemplateResId: Int,
+    @StringRes failFoodNameResId: Int,
+    compactMode: Boolean,
+    onRetryClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val retryCd = stringResource(R.string.gameplay_ko_retry_cd)
+    val foodName = stringResource(resolveRole2FoodNameResId(failFoodNameResId))
+    val failReason = stringResource(resolveRole2FailReasonResId(failReasonTemplateResId), foodName)
+
+    PixelArcadeBox(
+        modifier = modifier.fillMaxWidth(),
+        fillColor = colorScheme.surface,
+        borderColor = colorScheme.onSurface,
+        cornerStep = 4.dp,
+        contentPadding = PaddingValues(
+            horizontal = if (compactMode) 10.dp else 12.dp,
+            vertical = if (compactMode) 8.dp else 10.dp
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(if (compactMode) 6.dp else 8.dp)
+        ) {
+            PixelArcadeBox(
+                modifier = Modifier.fillMaxWidth(),
+                fillColor = colorScheme.errorContainer,
+                borderColor = colorScheme.onSurface,
+                cornerStep = 3.dp,
+                contentPadding = PaddingValues(
+                    horizontal = 10.dp,
+                    vertical = if (compactMode) 4.dp else 6.dp
+                )
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.gameplay_ko_title),
+                        style = if (compactMode) {
+                            MaterialTheme.typography.titleSmall
+                        } else {
+                            MaterialTheme.typography.titleMedium
+                        },
+                        fontWeight = FontWeight.ExtraBold,
+                        fontFamily = FontFamily.Monospace,
+                        color = colorScheme.onErrorContainer,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = stringResource(R.string.gameplay_ko_score_format, score),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Monospace,
+                        color = colorScheme.onErrorContainer,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            Text(
+                text = failReason,
+                style = if (compactMode) {
+                    MaterialTheme.typography.bodySmall
+                } else {
+                    MaterialTheme.typography.bodyMedium
+                },
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.SemiBold,
+                color = colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            PixelArcadeBox(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp)
+                    .semantics { contentDescription = retryCd }
+                    .clickable(role = Role.Button, onClick = onRetryClick),
+                fillColor = colorScheme.primary,
+                borderColor = colorScheme.onSurface,
+                cornerStep = 3.dp,
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.gameplay_ko_retry),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontFamily = FontFamily.Monospace,
+                    color = colorScheme.onPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center
+                )
+            }
         }
     }
 }
@@ -898,6 +1096,80 @@ internal fun GameplayLargeNightPreview() {
             onHighlightTargetChange = {},
             onSubmitItem = { _, _ -> },
             onPauseClick = {}
+        )
+    }
+}
+
+@Preview(name = "KO Retry Day — Skinny Dead (360x640)", widthDp = 360, heightDp = 640, showBackground = true)
+@Composable
+internal fun GameplaySkinnyKoRetryDayPreview() {
+    MaterialTheme(colorScheme = lightColorScheme()) {
+        val sampleItems = listOf(
+            ActiveFoodItem(id = 1L, type = FoodType.BURGER, yProgress = 0.32f),
+            ActiveFoodItem(id = 2L, type = FoodType.SALAD, yProgress = 0.68f)
+        )
+        GameplayBoardContent(
+            uiState = GameUiState(
+                score = 18,
+                speedLevel = 4,
+                speedProgress = 0.72f,
+                speedMultiplierText = "1.7x",
+                items = sampleItems,
+                isGameOver = true,
+                failReasonTemplateResId = R.string.fail_fed_clean_to_skinny,
+                failFoodNameResId = R.string.food_salad
+            ),
+            beltScrollPhase = 0.40f,
+            highlightedTarget = null,
+            skinnyPose = CharacterPose.DEAD,
+            chubbyPose = CharacterPose.SAD,
+            skinnyFedTick = 0,
+            chubbyFedTick = 0,
+            trashFedTick = 0,
+            shakeOffsetDp = 0f,
+            onHighlightTargetChange = {},
+            onSubmitItem = { _, _ -> },
+            onPauseClick = {},
+            showKoRetryBanner = true,
+            onRetryClick = {}
+        )
+    }
+}
+
+@Preview(name = "KO Retry Night — Chubby Dead (412x915)", widthDp = 412, heightDp = 915, showBackground = true)
+@Composable
+internal fun GameplayChubbyKoRetryNightPreview() {
+    MaterialTheme(colorScheme = darkColorScheme()) {
+        val sampleItems = listOf(
+            ActiveFoodItem(id = 1L, type = FoodType.BURGER, yProgress = 0.22f),
+            ActiveFoodItem(id = 2L, type = FoodType.SALAD, yProgress = 0.52f),
+            ActiveFoodItem(id = 3L, type = FoodType.FOOD_SCRAPS, yProgress = 0.80f)
+        )
+        GameplayBoardContent(
+            uiState = GameUiState(
+                score = 35,
+                speedLevel = 7,
+                speedProgress = 1.0f,
+                speedMultiplierText = "2.4x",
+                isAtMaxSpeed = true,
+                items = sampleItems,
+                isGameOver = true,
+                failReasonTemplateResId = R.string.fail_fed_high_cal_to_chubby,
+                failFoodNameResId = R.string.food_burger
+            ),
+            beltScrollPhase = 0.65f,
+            highlightedTarget = null,
+            skinnyPose = CharacterPose.SAD,
+            chubbyPose = CharacterPose.DEAD,
+            skinnyFedTick = 0,
+            chubbyFedTick = 0,
+            trashFedTick = 0,
+            shakeOffsetDp = 0f,
+            onHighlightTargetChange = {},
+            onSubmitItem = { _, _ -> },
+            onPauseClick = {},
+            showKoRetryBanner = true,
+            onRetryClick = {}
         )
     }
 }

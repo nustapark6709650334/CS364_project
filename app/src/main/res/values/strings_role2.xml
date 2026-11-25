@@ -24,4 +24,14 @@
     <string name="pause_dialog_body">Score: %1$d • Speed: %2$s\nYour conveyor state is safely paused.</string>
     <string name="pause_dialog_resume">RESUME</string>
     <string name="pause_dialog_exit">EXIT TO MENU</string>
+
+    <string name="gameplay_ko_title">GAME OVER!</string>
+    <string name="gameplay_ko_score_format">SCORE: %1$d</string>
+    <string name="gameplay_ko_retry">RETRY</string>
+    <string name="gameplay_ko_retry_cd">Retry and start a new game</string>
+    <string name="gameplay_ko_fail_clean_to_skinny">Fed %1$s to Skinny!</string>
+    <string name="gameplay_ko_fail_high_cal_to_chubby">Fed %1$s to Chubby!</string>
+    <string name="gameplay_ko_fail_hazard_to_person">Fed %1$s to a person!</string>
+    <string name="gameplay_ko_fail_trashed_good_food">Trashed good food (%1$s)!</string>
+    <string name="gameplay_ko_fail_missed_item">Missed %1$s on the belt!</string>
 </resources>

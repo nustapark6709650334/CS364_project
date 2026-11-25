@@ -94,4 +94,39 @@ class GameplayGestureAndLifecycleTest {
                 pausedSnapshot.items.first().yProgress
         )
     }
+
+    @Test
+    fun retryAfterGameOver_resetsScoreSpeedItemsAndAllowsNewRound() {
+        val engine = GameEngine()
+
+        repeat(5) {
+            val frontItem = engine.uiState.value.items.first()
+            engine.submitItemToTarget(
+                itemId = frontItem.id,
+                target = frontItem.type.category.expectedTarget
+            )
+        }
+        assertEquals(5, engine.uiState.value.score)
+        assertEquals(2, engine.uiState.value.speedLevel)
+
+        val currentItem = engine.uiState.value.items.first()
+        val wrongTarget = TargetType.entries.first { it != currentItem.type.category.expectedTarget }
+        engine.submitItemToTarget(itemId = currentItem.id, target = wrongTarget)
+        assertTrue(engine.uiState.value.isGameOver)
+        assertTrue(engine.uiState.value.isPaused)
+
+        engine.resetGame()
+
+        val resetState = engine.uiState.value
+        assertFalse(resetState.isGameOver)
+        assertFalse(resetState.isPaused)
+        assertEquals(0, resetState.score)
+        assertEquals(1, resetState.speedLevel)
+        assertEquals(1, resetState.items.size)
+
+        val nextItem = resetState.items.first()
+        engine.submitItemToTarget(itemId = nextItem.id, target = nextItem.type.category.expectedTarget)
+        assertEquals(1, engine.uiState.value.score)
+        assertFalse(engine.uiState.value.isGameOver)
+    }
 }

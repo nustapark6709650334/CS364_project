@@ -74,6 +74,7 @@
 | 2026-11-24 | Role 2 | OpenAI Codex + built-in ImageGen | char_skinny_yum.png, char_chubby_yum.png | Generated repaired happy belly-holding sprites from existing identity references | User requested happy expressions and complete hands on belly for both characters; existing correct-match reaction logic retained |
 | 2026-11-24 | Role 2 | OpenAI Codex | GameplayScreen.kt, CharacterView.kt, PauseExitDialog.kt, GameplaySessionViewModel.kt, SpriteContentBounds.kt, debug QA harness and tests | Implemented layout normalization, painter cache, ViewModel retention, lifecycle gates, adaptive dialog and regression tests | User requested reasonable proportions and remaining Role 2 fixes; validated on Android emulator with original gameplay rules and Role 3 integration boundary preserved |
 | 2026-11-24 | Role 2 | OpenAI Codex | `CharacterView.kt` | Reduced idle motion, hover and non-uniform scaling | Final sprites and layout inspected on Android at two sizes; see Section 4 |
+| `2026-11-25` | Role 2 | Antigravity | `GameplayScreen.kt`, `GameplaySessionViewModel.kt`, `CharacterView.kt`, `res/values*/strings_role2.xml`, `GameplayQaActivity.kt`, Role 2 unit & device tests | Implemented compact `GameplayKoRetryBanner`, `koRetryBannerPlacement` helper, TH/EN Role 2 fail-reason mappings, `handleRetry` session reset flow, `koRetryButtonResetsSessionAndAllowsSecondRound` device test, and KO floor-impact pixel dust puff in `CharacterView.kt` | User requested an in-screen Retry button after defeat and a small KO floor-impact dust/smoke puff; placed banner above characters to keep KO/crying artwork unobstructed, kept `deadDropOffsetDp` animating when disabled, and verified build + 11 JVM unit tests |
 | `<YYYY-MM-DD>` | `<ชื่อ>` | `<AI>` | `<ไฟล์>` | `<ส่วนที่ AI ช่วย>` | `<ส่วนที่แก้และเขียนต่อเอง>` |
 
 *ส่วนที่พัฒนาเอง 100% โดยไม่ใช้ AI:* `<ระบุชื่อไฟล์/โมดูล และผู้พัฒนา>`
@@ -109,10 +110,10 @@ Results apply to Role 2 and its debug harness, not the unfinished app-wide integ
 | Check | Result / scope |
 | :--- | :--- |
 | Build | `:app:assembleDebug` and `:app:installDebug` passed; launched debug-only QA activity on Android 15 / Pixel_6a emulator |
-| JVM tests | 8 passed: engine, gesture dead zone, pause preservation, sprite alpha bounds, layout constraints |
-| Device tests | 2 passed: pause/background/recreation retains engine and exact paused score/items/speed; Back cancels/resumes and pauses again; KO consumes Back and delays navigation until resumed |
-| TH/EN and Day/Night | Role 2 board and pause dialog visually inspected; no clipped action labels in captured sizes |
-| Responsive | Actual Android screenshots at 360x640 dp and 412x915 dp; 4 poses/dialog states per size. Final shadow alignment also verified |
+| JVM tests | 11 passed: engine, gesture dead zone, pause preservation, post-KO reset, sprite alpha bounds, layout & KO banner placement constraints, Role 2 fail-reason string mappings |
+| Device tests | 3 passed: pause/background/recreation retains engine and exact paused score/items/speed; Back cancels/resumes and pauses again; KO consumes Back and delays navigation until resumed; post-KO Retry banner resets score/belt/audio and allows repeated rounds |
+| TH/EN and Day/Night | Role 2 board, pause dialog, and KO Retry banner visually inspected; no clipped action labels in captured sizes |
+| Responsive | Actual Android screenshots at 360x640 dp and 412x915 dp; 5 poses/dialog/KO-retry states per size. Final shadow alignment and banner clearance also verified |
 | Integration boundary | MainActivity, production navigation, real audio and other Roles were not implemented here. Feedback/audio callbacks remain ready for Role 3 |
 | Persistence limit | ViewModel survives configuration/Activity recreation within its owner. Process-death or force-stop restoration is not implemented |
 | Attribution | Existing sprite edits and their prompts are recorded above; no additional image generation for layout adjustments |
@@ -125,10 +126,11 @@ Evidence: [verified screenshots](ui/role2_verified/) and [original sprites](ui/b
 | Skinny KO | [View](ui/role2_verified/360_day_th_skinny_ko.png) | [View](ui/role2_verified/412_night_en_skinny_ko.png) |
 | Chubby KO | [View](ui/role2_verified/360_day_th_chubby_ko.png) | [View](ui/role2_verified/412_night_en_chubby_ko.png) |
 | Pause | [View](ui/role2_verified/360_day_th_pause.png) | [View](ui/role2_verified/412_night_en_pause.png) |
+| KO Retry Banner | [View](ui/role2_verified/360_day_th_skinny_ko_retry.png) | [View](ui/role2_verified/412_night_en_chubby_ko_retry.png) |
 
 Debug-only manual QA entry point (excluded from release):
 `adb shell am start -n com.cs364.foodrush/.ui.screens.GameplayQaActivity`
 
-For a static visual fixture, add `--es pose yum` (or `skinny_ko`, `chubby_ko`, `sad`, `pause`), `--es lang th` / `en`, and optionally `--ez night true`. Static fixtures are for layout inspection; the no-extra activity runs the real GameplayScreen. Navigation callbacks are counted by the harness for tests rather than connected to other roles' screens.
+For a static visual fixture, add `--es pose yum` (or `skinny_ko`, `chubby_ko`, `sad`, `pause`, `skinny_ko_retry`, `chubby_ko_retry`), `--es lang th` / `en`, and optionally `--ez night true`. Static fixtures are for layout inspection; the no-extra activity runs the real GameplayScreen. Navigation callbacks are counted by the harness for tests rather than connected to other roles' screens.
 
 Quality gate for this Role 2 patch: build/run, scoped TH/EN, scoped Day/Night, two screen sizes, Back/lifecycle tests and AI log completed. App-wide checklist items for other screens remain unchanged; actual audio integration and score deletion belong to their respective roles.

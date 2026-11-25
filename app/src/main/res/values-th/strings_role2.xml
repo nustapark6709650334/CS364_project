@@ -24,4 +24,14 @@
     <string name="pause_dialog_body">คะแนน: %1$d • ความเร็ว: %2$s\nบันทึกสถานะสายพานไว้เรียบร้อยแล้ว</string>
     <string name="pause_dialog_resume">เล่นต่อ</string>
     <string name="pause_dialog_exit">กลับเมนูหลัก</string>
+
+    <string name="gameplay_ko_title">จบเกม!</string>
+    <string name="gameplay_ko_score_format">คะแนน: %1$d</string>
+    <string name="gameplay_ko_retry">เริ่มใหม่</string>
+    <string name="gameplay_ko_retry_cd">เริ่มเล่นเกมใหม่อีกครั้ง</string>
+    <string name="gameplay_ko_fail_clean_to_skinny">ป้อน%1$sให้คนผอม!</string>
+    <string name="gameplay_ko_fail_high_cal_to_chubby">ป้อน%1$sให้คนอ้วน!</string>
+    <string name="gameplay_ko_fail_hazard_to_person">ป้อน%1$sให้คน!</string>
+    <string name="gameplay_ko_fail_trashed_good_food">ทิ้งอาหารดี (%1$s) ลงถังขยะ!</string>
+    <string name="gameplay_ko_fail_missed_item">ปล่อย%1$sหลุดสายพาน!</string>
 </resources>
