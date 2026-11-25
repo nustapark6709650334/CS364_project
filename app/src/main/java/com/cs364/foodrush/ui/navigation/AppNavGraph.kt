@@ -58,12 +58,15 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.cs364.foodrush.R
+import com.cs364.foodrush.data.ScoreRepository
 import com.cs364.foodrush.data.settings.SettingsPreferences
 import com.cs364.foodrush.data.settings.UserSettings
 import com.cs364.foodrush.game.HapticAudioManager
 import com.cs364.foodrush.ui.components.PixelArcadeBox
+import com.cs364.foodrush.ui.screens.GameOverScreen
 import com.cs364.foodrush.ui.screens.GameplayScreen
 import com.cs364.foodrush.ui.screens.MainMenuScreen
+import com.cs364.foodrush.ui.screens.ScoreHistoryScreen
 import com.cs364.foodrush.ui.settings.SettingsScreen
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -170,13 +173,18 @@ fun AppNavGraph(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val highScorePreferences = remember(context) { HighScorePreferences(context) }
+    val scoreRepository = remember(context) { ScoreRepository(context) }
 
     val userSettings by settingsPreferences.settingsFlow.collectAsStateWithLifecycle(
         initialValue = UserSettings()
     )
-    val bestScore by highScorePreferences.bestScoreFlow.collectAsStateWithLifecycle(
+    val prefsBestScore by highScorePreferences.bestScoreFlow.collectAsStateWithLifecycle(
         initialValue = 0
     )
+    val savedScores by scoreRepository.scores.collectAsStateWithLifecycle(
+        initialValue = emptyList()
+    )
+    val bestScore = maxOf(prefsBestScore, savedScores.maxOfOrNull { it.score } ?: 0)
 
     LaunchedEffect(userSettings) {
         hapticAudioManager.updateSettings(userSettings)
@@ -269,6 +277,8 @@ fun AppNavGraph(
                     ?: R.string.food_burger
             )
             val displayBest = maxOf(bestScore, score)
+            val failFoodName = stringResource(failFoodResId)
+            val failReasonText = stringResource(failReasonResId, failFoodName)
 
             // Back returns cleanly to MainMenu without popping into a dead Gameplay board (Rubric 4.1)
             BackHandler {
@@ -276,12 +286,11 @@ fun AppNavGraph(
                 navController.popBackStack(AppRoute.MAIN_MENU, inclusive = false)
             }
 
-            // Role 4 will replace GameOverBridgeScreen with GameOverScreen(...)
-            GameOverBridgeScreen(
+            GameOverScreen(
                 score = score,
                 bestScore = displayBest,
-                failReasonResId = failReasonResId,
-                failFoodResId = failFoodResId,
+                failReason = failReasonText,
+                repository = scoreRepository,
                 onPlayAgain = {
                     hapticAudioManager.playUiClick()
                     navController.navigate(AppRoute.GAMEPLAY) {
@@ -309,9 +318,8 @@ fun AppNavGraph(
                 navController.popBackStack(AppRoute.MAIN_MENU, inclusive = false)
             }
 
-            // Role 4 will replace ScoreHistoryBridgeScreen with ScoreHistoryScreen(...)
-            ScoreHistoryBridgeScreen(
-                bestScore = bestScore,
+            ScoreHistoryScreen(
+                repository = scoreRepository,
                 onNavigateBack = {
                     hapticAudioManager.playUiClick()
                     navController.popBackStack(AppRoute.MAIN_MENU, inclusive = false)
@@ -327,263 +335,6 @@ fun AppNavGraph(
                     navController.popBackStack(AppRoute.MAIN_MENU, inclusive = false)
                 }
             )
-        }
-    }
-}
-
-@Composable
-private fun GameOverBridgeScreen(
-    score: Int,
-    bestScore: Int,
-    @StringRes failReasonResId: Int,
-    @StringRes failFoodResId: Int,
-    onPlayAgain: () -> Unit,
-    onViewHistory: () -> Unit,
-    onNavigateHome: () -> Unit
-) {
-    val colorScheme = MaterialTheme.colorScheme
-    val foodName = stringResource(failFoodResId)
-    val failReason = stringResource(failReasonResId, foodName)
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(colorScheme.background)
-            .safeDrawingPadding()
-            .verticalScroll(rememberScrollState())
-            .padding(20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Column(
-            modifier = Modifier.widthIn(max = 420.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            PixelArcadeBox(
-                modifier = Modifier.fillMaxWidth(),
-                fillColor = colorScheme.errorContainer,
-                borderColor = colorScheme.onSurface,
-                cornerStep = 5.dp,
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.game_over_title).uppercase(),
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = colorScheme.onErrorContainer,
-                    textAlign = TextAlign.Center
-                )
-            }
-
-            PixelArcadeBox(
-                modifier = Modifier.fillMaxWidth(),
-                fillColor = colorScheme.surfaceVariant,
-                borderColor = colorScheme.onSurface,
-                cornerStep = 4.dp,
-                contentPadding = PaddingValues(16.dp)
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.game_over_score, score),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = colorScheme.onSurface
-                    )
-                    Text(
-                        text = stringResource(R.string.game_over_best_score, bestScore),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Bold,
-                        color = colorScheme.primary
-                    )
-                    Text(
-                        text = failReason,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontFamily = FontFamily.Monospace,
-                        color = colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = stringResource(R.string.role4_bridge_game_over_note),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                PixelArcadeBox(
-                    modifier = Modifier
-                        .weight(1f)
-                        .heightIn(min = 50.dp)
-                        .clickable(role = Role.Button, onClick = onPlayAgain),
-                    fillColor = colorScheme.primary,
-                    borderColor = colorScheme.onSurface,
-                    cornerStep = 4.dp,
-                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 12.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.btn_restart),
-                        style = MaterialTheme.typography.labelLarge,
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = colorScheme.onPrimary,
-                        textAlign = TextAlign.Center
-                    )
-                }
-
-                PixelArcadeBox(
-                    modifier = Modifier
-                        .weight(1f)
-                        .heightIn(min = 50.dp)
-                        .clickable(role = Role.Button, onClick = onViewHistory),
-                    fillColor = colorScheme.inverseSurface,
-                    borderColor = colorScheme.onSurface,
-                    cornerStep = 4.dp,
-                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 12.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.menu_leaderboard),
-                        style = MaterialTheme.typography.labelLarge,
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = colorScheme.inverseOnSurface,
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
-
-            PixelArcadeBox(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 48.dp)
-                    .clickable(role = Role.Button, onClick = onNavigateHome),
-                fillColor = colorScheme.secondaryContainer,
-                borderColor = colorScheme.onSurface,
-                cornerStep = 4.dp,
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.btn_home),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = colorScheme.onSecondaryContainer,
-                    textAlign = TextAlign.Center
-                )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ScoreHistoryBridgeScreen(
-    bestScore: Int,
-    onNavigateBack: () -> Unit
-) {
-    val colorScheme = MaterialTheme.colorScheme
-
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = stringResource(R.string.leaderboard_title),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.cd_navigate_back)
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = colorScheme.surface,
-                    titleContentColor = colorScheme.onSurface
-                )
-            )
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            PixelArcadeBox(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .widthIn(max = 420.dp),
-                fillColor = colorScheme.surfaceVariant,
-                borderColor = colorScheme.onSurface,
-                cornerStep = 4.dp,
-                contentPadding = PaddingValues(18.dp)
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Text(
-                        text = if (bestScore > 0) {
-                            stringResource(R.string.game_over_best_score, bestScore)
-                        } else {
-                            stringResource(R.string.leaderboard_empty)
-                        },
-                        style = MaterialTheme.typography.titleMedium,
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = colorScheme.onSurface,
-                        textAlign = TextAlign.Center
-                    )
-                    Text(
-                        text = stringResource(R.string.role4_bridge_history_note),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
-
-            PixelArcadeBox(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .widthIn(max = 420.dp)
-                    .heightIn(min = 48.dp)
-                    .clickable(role = Role.Button, onClick = onNavigateBack),
-                fillColor = colorScheme.primary,
-                borderColor = colorScheme.onSurface,
-                cornerStep = 4.dp,
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.btn_back),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = colorScheme.onPrimary
-                )
-            }
         }
     }
 }

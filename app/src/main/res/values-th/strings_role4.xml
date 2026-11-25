@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Role 4: Game Over, Score History & Delete Confirmation Dialog (TH) -->
+    <string name="role4_player_name">ชื่อผู้เล่น</string>
+    <string name="role4_enter_name">กรอกชื่อของคุณ</string>
+    <string name="role4_save_score">บันทึกคะแนน</string>
+    <string name="role4_saving">กำลังบันทึก...</string>
+    <string name="role4_clear_all">ล้างประวัติคะแนนทั้งหมด</string>
+    <string name="role4_delete">ลบคะแนน</string>
+    <string name="role4_delete_title">ยืนยันการลบคะแนน?</string>
+    <string name="role4_delete_message">คุณแน่ใจหรือไม่ว่าต้องการลบรายการคะแนนนี้? การลบนี้ไม่สามารถกู้คืนได้</string>
+    <string name="role4_clear_title">ล้างประวัติคะแนนทั้งหมด?</string>
+    <string name="role4_clear_message">คุณแน่ใจหรือไม่ว่าต้องการลบประวัติคะแนนทั้งหมด? การลบนี้ไม่สามารถกู้คืนได้</string>
+    <string name="role4_delete_confirm">ลบ</string>
+    <string name="role4_delete_cancel">ยกเลิก</string>
+</resources>
