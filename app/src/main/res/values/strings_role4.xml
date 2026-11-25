@@ -1,0 +1,15 @@
+<resources>
+    <!-- Role 4: Game Over, Score History & Delete Confirmation Dialog (EN) -->
+    <string name="role4_player_name">Player Name</string>
+    <string name="role4_enter_name">Enter your name</string>
+    <string name="role4_save_score">SAVE SCORE</string>
+    <string name="role4_saving">SAVING...</string>
+    <string name="role4_clear_all">CLEAR ALL SCORES</string>
+    <string name="role4_delete">Delete score</string>
+    <string name="role4_delete_title">Delete Score?</string>
+    <string name="role4_delete_message">Are you sure you want to delete this score record? This action cannot be undone.</string>
+    <string name="role4_clear_title">Clear All Scores?</string>
+    <string name="role4_clear_message">Are you sure you want to delete all score history? This action cannot be undone.</string>
+    <string name="role4_delete_confirm">DELETE</string>
+    <string name="role4_delete_cancel">CANCEL</string>
+</resources>

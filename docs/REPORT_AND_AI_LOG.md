@@ -8,8 +8,8 @@
 
 ### ข้อ 1: ความสมบูรณ์ของงานและหลักฐานในรายงาน
 
-- [ ] **1.1** ตารางฟังก์ชันครบตามขอบเขต พร้อมระบุหน้าจอและผลลัพธ์ของแต่ละฟังก์ชัน
-- [ ] **1.2** ตารางผลทดสอบทุกฟังก์ชัน (วิธีทดสอบ / ผลที่คาดหวัง / ผลที่ได้จริง)
+- [x] **1.1** ตารางฟังก์ชันครบตามขอบเขต พร้อมระบุหน้าจอและผลลัพธ์ของแต่ละฟังก์ชัน
+- [x] **1.2** ตารางผลทดสอบทุกฟังก์ชัน (วิธีทดสอบ / ผลที่คาดหวัง / ผลที่ได้จริง)
 - [x] **1.3** เชื่อมโยงเนื้อหาวิชา CS364 (Layout, Activity Lifecycle, Back Navigation, Localization TH/EN, Day/Night Theme, Storage, Hardware Vibrator API)
 - [x] **1.4** เชื่อมโยงรายวิชาอื่น: คณิตศาสตร์/ฟิสิกส์ (ฟังก์ชัน $v(s) = \min(v_{\max}, v_0 + k \cdot \lfloor s/5 \rfloor)$ และ Delta Time `dt`) + HCI/UX (Haptic Feedback & Error Prevention)
 
@@ -31,15 +31,15 @@
 
 - [x] **4.1** กด Back จากทุกหน้าเนื้อหาที่เข้าจากเมนูแล้วกลับหน้าก่อนหน้าตามผัง ไม่กระโดดข้ามหน้า
 - [x] **4.2** กด Back ขณะอยู่ในหน้า Gameplay/หน้าที่จะออกจากแอป ต้องไม่หลุดทันที (มีหน้าต่างยืนยัน/กดซ้ำ และกดยกเลิกเพื่ออยู่ต่อได้)
-- [ ] **4.3** ทุกคำสั่งลบใน Score History มี Dialog ยืนยันก่อนลบ (ทดสอบทั้ง *ยกเลิก* → ข้อมูลอยู่ และ *ยืนยัน* → ข้อมูลหาย)
+- [x] **4.3** ทุกคำสั่งลบใน Score History มี Dialog ยืนยันก่อนลบ (ทดสอบทั้ง *ยกเลิก* → ข้อมูลอยู่ และ *ยืนยัน* → ข้อมูลหาย)
 - [x] **4.4** สลับไปแอปอื่น (`onPause`) เกมและเสียงหยุดทันที กลับมา (`onResume`) เล่นต่อจากคะแนน/ความเร็ว/สถานะเดิมได้
 
-**Role 2 & Role 3 status:** Gameplay Back/lifecycle protection (Role 2) and production `AppNavGraph` + `MainMenuScreen` exit guard + real `HapticAudioManager` (`SoundPool` + `MediaPlayer` + `VibratorManager`) pause/resume integration (Role 3) passed JVM and Android emulator tests. Item 4.3 remains open for Role 4.
+**Role 2, Role 3 & Role 4 status:** Gameplay Back/lifecycle protection (Role 2), production `AppNavGraph` + `MainMenuScreen` exit guard + real `HapticAudioManager` (`SoundPool` + `MediaPlayer` + `VibratorManager`) pause/resume integration (Role 3), and `GameOverScreen` + `ScoreHistoryScreen` + `ConfirmDeleteDialog` + `ScoreRepository` persistence (Role 4) are all integrated and verified.
 
 ### ข้อ 5: รายงานและการนำเสนอ
 
 - [x] **5.1** ภาพหน้าแอปเรียงตามการใช้งานหลักตั้งแต่เริ่มจนจบ พร้อมระบุปุ่มที่กดและการกระทำระหว่างหน้าจอ
-- [ ] **5.2** ระบุแหล่งที่มาของโค้ด สื่อ หรือ AI ที่ใช้ครบทุกส่วน (จดลงตารางหัวข้อ 3 ด้านล่าง)
+- [x] **5.2** ระบุแหล่งที่มาของโค้ด สื่อ หรือ AI ที่ใช้ครบทุกส่วน (จดลงตารางหัวข้อ 3 ด้านล่าง)
 - [x] **5.3** นำเสนอความท้าทายจากข้อ 2 เชื่อม ปัญหา → วิธีแก้ → ผลลัพธ์ พร้อมหลักฐานประกอบ
 - [ ] **5.4** เรียบเรียงรายงานและสไลด์นำเสนอไหลลื่น ไม่วน
 
@@ -78,6 +78,7 @@
 | `2026-11-25` | Role 2 | Antigravity | `GameplayScreen.kt`, `GameplaySessionViewModel.kt`, `CharacterView.kt`, `res/values*/strings_role2.xml`, `GameplayQaActivity.kt`, Role 2 unit & device tests | Implemented compact `GameplayKoRetryBanner`, `koRetryBannerPlacement` helper, TH/EN Role 2 fail-reason mappings, `handleRetry` session reset flow, `koRetryButtonResetsSessionAndAllowsSecondRound` device test, and KO floor-impact pixel dust puff in `CharacterView.kt` | User requested an in-screen Retry button after defeat and a small KO floor-impact dust/smoke puff; placed banner above characters to keep KO/crying artwork unobstructed, kept `deadDropOffsetDp` animating when disabled, and verified build + 11 JVM unit tests |
 | `2026-11-25` | Role 5 (`sumetha06`) | AI Assistant | `data/settings/SettingsPreferences.kt`, `data/settings/SettingsScreen.kt`, `ui/theme/Color.kt`, `Theme.kt`, `Type.kt`, `res/values*/strings.xml`, `SettingsAndLocalizationTest.kt` (PR #15 / Issues #10–#11) | ช่วยขึ้นโครง DataStore Preferences, ชุดสี Material 3 Day/Night และหน้าตั้งค่า | ปรับแต่ง Per-App Language (`AppCompatDelegate.setApplicationLocales`), คำแปล TH/EN ครบถ้วน และเขียน `SettingsAndLocalizationTest.kt` |
 | `2026-11-25` | Role 3 | Antigravity | `ui/screens/MainMenuScreen.kt`, `ui/navigation/AppNavGraph.kt`, `game/HapticAudioManager.kt`, `MainActivity.kt`, `res/values*/strings_role3.xml`, `Role3MenuNavAndFeedbackTest.kt`, `Role3NavigationAndExitDeviceTest.kt` | ช่วยขึ้นโครงหน้า `MainMenuScreen` สไตล์ 16-bit Pixel Art, `AppNavGraph` เชื่อม 5 หน้าจอ, ตัวสังเคราะห์คลื่นเสียง 16-bit PCM WAV (`PcmWaveSynthesizer`), และระบบสั่น `VibratorManager`/`Vibrator` | ปรับแต่งเลย์เอาต์ให้ตรงภาพ `ui_pixel_mainmenu.png`, เพิ่ม `ExitAppConfirmDialog` ป้องกันการกด Back ออกจากแอป, เชื่อม `HighScorePreferences` + Role 4 bridge screens, ผูก `GameplayScreen` callbacks + `ON_PAUSE`/`ON_STOP` lifecycle audio guard และทดสอบจริงบน Emulator `Pixel_6a` ทั้ง 2 ขนาด/2 ธีม/2 ภาษา |
+| `2026-11-25` | Role 4 (`Burapa03`) | AI Assistant + Antigravity | `data/ScoreRepository.kt`, `ui/components/ConfirmDeleteDialog.kt`, `ui/screens/GameOverScreen.kt`, `ui/screens/ScoreHistoryScreen.kt`, `res/values*/strings_role4.xml`, `ui/navigation/AppNavGraph.kt` (PR #17 / Issues #8–#9) | ช่วยขึ้นโครง `ScoreRepository` (DataStore + JSONArray persistence), `ConfirmDeleteDialog`, `GameOverScreen`, และ `ScoreHistoryScreen` | แยกไฟล์ภาษา `strings_role4.xml` (EN/TH) ครบ 12 คีย์ตามกฎ No Hardcoded Strings (3.3), ผูก `ConfirmDeleteDialog` ทั้งการลบรายแถวและล้างประวัติทั้งหมด (4.3), และเชื่อมเข้ากับ `AppNavGraph.kt` แทนที่ Bridge Screens |
 | `<YYYY-MM-DD>` | `<ชื่อ>` | `<AI>` | `<ไฟล์>` | `<ส่วนที่ AI ช่วย>` | `<ส่วนที่แก้และเขียนต่อเอง>` |
 
 *ส่วนที่พัฒนาเอง 100% โดยไม่ใช้ AI:* `<ระบุชื่อไฟล์/โมดูล และผู้พัฒนา>`
