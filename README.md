@@ -20,7 +20,16 @@
 | Role | ชื่อ-รหัสสมาชิก | ไฟล์ / หน้าจอที่รับผิดชอบ | เกณฑ์ CS364 ที่รับผิดชอบในรายงาน |
 | :--- | :--- | :--- | :--- |
 | **Role 1: Game Engine & Speed Mechanics** | `<ชื่อ + รหัส>` | `game/GameEngine.kt`, `SpeedController.kt`, `FoodItem.kt` (ระบบคิวจาน, สูตร Speed Cap, Delta Time) | ข้อ 1.4, 2.1–2.4, 5.3 |
-| **Role 2: Gameplay UI & Lifecycle Guard** | `<ชื่อ + รหัส>` | `ui/screens/GameplayScreen.kt`, `PauseExitDialog.kt`, `CharacterView.kt` (กระดานเล่น, ปุ่ม 3 ทาง, Pause/Resume) | ข้อ 4.2, 4.4 |
+| **Role 2: Gameplay UI & Lifecycle Guard** | `<ชื่อ + รหัส>` | `ui/screens/GameplayScreen.kt`, `GameplaySessionViewModel.kt`, `ui/components/PauseExitDialog.kt`, `CharacterView.kt`, `SpriteContentBounds.kt` (ลาก/ปัดอาหาร, แตะตัวละคร, Pause/Resume) | ข้อ 4.2, 4.4 |
 | **Role 3: Menu, Navigation, Haptics & Audio** | `<ชื่อ + รหัส>` | `ui/screens/MainMenuScreen.kt`, `AppNavGraph.kt`, `HapticAudioManager.kt` (หน้าแรก, เส้นทางหน้าจอ, สั่น & เสียง) | ข้อ 1.3, 4.1, 5.1 |
 | **Role 4: Game Over, Score DB & Delete Guard** | `<ชื่อ + รหัส>` | `ui/screens/GameOverScreen.kt`, `ScoreHistoryScreen.kt`, `ConfirmDeleteDialog.kt`, `ScoreRepository.kt` | ข้อ 1.1, 4.3 |
 | **Role 5: Settings, Day/Night, TH/EN & QA** | `<ชื่อ + รหัส>` | `ui/screens/SettingsScreen.kt`, `ui/theme/*`, `SettingsPreferences.kt`, `res/values*/strings.xml` + รูป/เสียงหลัก | ข้อ 1.2, 3.1–3.4, 5.2 |
+
+## สถานะ Role 2
+
+Gameplay UI, ท่าดีใจจับท้อง/ร้องไห้/ล้ม, Back guard และ Lifecycle พร้อมให้ทีมเชื่อมต่อแล้ว ตรวจ build, unit tests 8 ข้อ และ Android tests 2 ข้อผ่าน พร้อมภาพ TH/Day ที่ 360×640 dp และ EN/Night ที่ 412×915 dp
+
+- [ผลทดสอบและภาพหลักฐาน](docs/REPORT_AND_AI_LOG.md)
+- [วิธีรันและส่งต่องาน Role 2](docs/ROLE2_HANDOFF.md)
+
+หน้าเริ่มแอปยังเป็น placeholder; Navigation/เสียงจริงและหน้าจอของ Role อื่นรอรวมงาน ส่วน Role 2 มี Activity สำหรับทดสอบเฉพาะ debug ซึ่งไม่รวมใน release

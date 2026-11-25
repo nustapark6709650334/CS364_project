@@ -1,0 +1,27 @@
+<resources>
+    <!-- Role 2: Gameplay UI & Pause Exit Dialog Strings (EN) -->
+    <string name="gameplay_score_label">SCORE:</string>
+    <string name="gameplay_plus_one">+1</string>
+    <string name="gameplay_speed_up_banner">SPEED UP!</string>
+    <string name="gameplay_speed_level_format">LV.%1$d • %2$s</string>
+    <string name="gameplay_speed_max_format">MAX • %1$s</string>
+    <string name="gameplay_pause_symbol">II</string>
+    <string name="gameplay_pause_cd">Pause game</string>
+
+    <string name="gameplay_target_skinny">Skinny</string>
+    <string name="gameplay_target_skinny_food">Burger</string>
+    <string name="gameplay_target_trash">Trash</string>
+    <string name="gameplay_target_trash_food">Scraps</string>
+    <string name="gameplay_target_chubby">Chubby</string>
+    <string name="gameplay_target_chubby_food">Salad</string>
+    <string name="gameplay_hint_controls">Drag plate to character or tap below!</string>
+
+    <string name="gameplay_cd_skinny">Skinny character on the left (High-calorie)</string>
+    <string name="gameplay_cd_chubby">Chubby character on the right (Clean food)</string>
+    <string name="gameplay_cd_trash">Trash bin at the bottom (Food scraps)</string>
+
+    <string name="pause_dialog_title">GAME PAUSED</string>
+    <string name="pause_dialog_body">Score: %1$d • Speed: %2$s\nYour conveyor state is safely paused.</string>
+    <string name="pause_dialog_resume">RESUME</string>
+    <string name="pause_dialog_exit">EXIT TO MENU</string>
+</resources>

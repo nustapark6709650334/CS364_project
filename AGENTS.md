@@ -1,13 +1,15 @@
 # Fit & Fat: Food Rush — Project Rules & Spec (CS364 2569)
 
 ## 0. AI File-Reading & Token-Saving Policy (CRITICAL)
+
 - **This file (`AGENTS.md`) is auto-loaded.** It contains 100% of the game spec, CS364 rules, Git workflow, and PR template.
-- **Do NOT read `README.md`** — it is only a short GitHub cover page for humans.
+- **Do NOT read `README.md` during routine coding** — it is a short GitHub cover page. Read it when the user explicitly requests a documentation review.
 - **Do NOT read `docs/REPORT_AND_AI_LOG.md` while coding or debugging.** Only open/edit it **once at the end of a completed feature/fix** to tick `[x]` on completed rubric items and log AI/asset/bug rows, or when asked to work on the report.
 
 ---
 
 ## 1. Tech Stack & Package Structure (Locked)
+
 - **Language / UI:** Android **Kotlin** + **Jetpack Compose** (Material 3)
 - **Localization:** `res/values/strings.xml` (EN) + `res/values-th/strings.xml` (TH) + per-app locale switching
 - **Theme:** Material 3 `lightColorScheme` (Day) / `darkColorScheme` (Night) toggleable in Settings
@@ -15,7 +17,7 @@
 - **Storage:** DataStore Preferences (settings, theme, lang, high score) + Room or JSON/SQLite (score history)
 - **Conflict-Free 5-Role File Ownership (`com.cs364.foodrush`):**
   - **Role 1 (Game Engine & Speed Mechanics):** `game/GameEngine.kt`, `game/SpeedController.kt`, `game/FoodItem.kt` — Rubric 1.4, 2.1–2.4, 5.3
-  - **Role 2 (Gameplay UI & Lifecycle Guard):** `ui/screens/GameplayScreen.kt`, `ui/components/PauseExitDialog.kt`, `ui/components/CharacterView.kt` — Rubric 4.2, 4.4
+  - **Role 2 (Gameplay UI & Lifecycle Guard):** `ui/screens/GameplayScreen.kt`, `ui/components/PauseExitDialog.kt`, `ui/components/CharacterView.kt`, `ui/screens/GameplaySessionViewModel.kt`, `ui/components/SpriteContentBounds.kt`, Role 2 tests and debug-only QA activity — Rubric 4.2, 4.4
   - **Role 3 (Main Menu, Navigation, Haptics & Audio):** `ui/screens/MainMenuScreen.kt`, `ui/navigation/AppNavGraph.kt`, `game/HapticAudioManager.kt` — Rubric 1.3, 4.1, 5.1
   - **Role 4 (Game Over, Score DB & Delete Confirmation):** `ui/screens/GameOverScreen.kt`, `ui/screens/ScoreHistoryScreen.kt`, `ui/components/ConfirmDeleteDialog.kt`, `data/ScoreRepository.kt` — Rubric 1.1, 4.3
   - **Role 5 (Settings/How-To, Day/Night Theme, TH/EN i18n & Multi-Screen QA):** `ui/screens/SettingsScreen.kt`, `ui/theme/*`, `data/SettingsPreferences.kt`, `res/values*/strings.xml` — Rubric 1.2, 3.1–3.4, 5.2
@@ -25,6 +27,7 @@
 ## 2. Core Game Spec
 
 ### Characters & Items (3 Types)
+
 | Target | Concept | Accepted Items (+1 Score) | Wrong Input |
 | :--- | :--- | :--- | :--- |
 | **Skinny (คนผอม)** | เพิ่มน้ำหนัก/พลังงาน | High-calorie: **Burger (เบอร์เกอร์)** | Clean food or Hazard → **Game Over** |
@@ -32,6 +35,7 @@
 | **Trash (ถังขยะ)** | กำจัดสิ่งอันตราย | Hazards: **Food Scraps (เศษอาหาร)** | Any real food → **Game Over** |
 
 ### Controls, Visual Style (16-Bit Pixel Art), Speed Cap & Haptics
+
 - **Visual Style & Reference Mockups (Locked — Option 1 + Style 3: 16-Bit Pixel Art Arcade):**
   - **UI Reference Mockups (`docs/ui/`):**
     - `docs/ui/ui_pixel_mainmenu.png` — `MainMenuScreen`: Shows the 3 pixel-art mascots (`R.drawable.char_skinny`, `R.drawable.char_trash`, `R.drawable.char_chubby`), High Score banner, and 3 arcade buttons (`Play Game`, `Score History`, `Settings & How-To`).
@@ -71,7 +75,7 @@
 3. **No Hardcoded Colors — Day/Night (3.4):** Always use `MaterialTheme.colorScheme.*` (never `Color(0xFF...)` inside screens). Verify contrast in Day & Night themes.
 4. **Back Navigation Guard (4.1–4.2):** Sub-screens pop back to `MainMenu`. In `GameplayScreen`, `BackHandler` pauses the game and shows a confirm-exit dialog (Cancel resumes). In `MainMenu`, `BackHandler` requires double-press or exit dialog.
 5. **Confirm Every Delete (4.3):** Deleting 1 score or clearing history in `ScoreHistoryScreen` must open a `ConfirmDeleteDialog` first (test both Cancel & Confirm).
-6. **Activity Lifecycle Safety (4.4):** Use `DisposableEffect` + `LifecycleEventObserver` in `GameplayScreen`: on `ON_PAUSE`/`ON_STOP`, immediately pause the game loop & audio while preserving score, speed, and items; allow clean resume on `ON_RESUME`.
+6. **Activity Lifecycle Safety (4.4):** Use `DisposableEffect` + `LifecycleEventObserver` in `GameplayScreen`: on `ON_PAUSE`/`ON_STOP`, immediately pause the game loop & audio while preserving score, speed, and items; show the pause dialog on `ON_RESUME` and resume only after user confirmation. Keep the game session in a navigation-entry-scoped ViewModel for Activity recreation; process-death restoration is not implied.
 7. **Auto-Tick & Log Immediately (5.2):** When finishing any feature or bug fix, open `docs/REPORT_AND_AI_LOG.md` to tick `- [x]` on verified rubric items and add AI/asset/bug (Before/After) rows before finishing the PR.
 
 ---
@@ -88,17 +92,21 @@
 
 ```markdown
 ## Summary
+
 - <What this PR changes & files touched>
 **Type:** `feat` | `fix` | `ui` | `i18n` | `theme` | `docs`
 
 ## CS364 Quality Gate (Definition of Done)
+
 - [ ] Build & Run clean on Android (no crash)
 - [ ] TH/EN (3.3): All strings in `values/` & `values-th/`
 - [ ] Day/Night (3.4): Uses `MaterialTheme.colorScheme`, readable in both themes
 - [ ] Responsive (3.1–3.2): Verified on ≥2 screen sizes, no overlap/clipping
-- [ ] Back / Lifecycle / Delete (4.1–4.4): `BackHandler` works, `ON_PAUSE` pauses & preserves state, delete has Confirm Dialog
+- [ ] Back / Lifecycle (4.1, 4.2, 4.4): Verify relevant screens, pause/resume and state preservation
+- [ ] Delete (4.3): Confirm Dialog tested, or state N/A when outside this PR
 - [ ] Log (5.2): Updated `docs/REPORT_AND_AI_LOG.md`
 
 ## Screenshots / Evidence
+
 - <Attach Before/After, Day/Night, or multi-screen screenshots if UI changed>
 ```
